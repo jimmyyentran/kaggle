@@ -41,7 +41,15 @@ int main(){
         cout << relative_filename << endl;
         Mat src = imread(relative_filename, CV_LOAD_IMAGE_COLOR);
         Mat output = resizeKeepAspectRatio(src, Size(SIDE_LENGTH, SIDE_LENGTH), BLACK);
-        imwrite(PROCESSED + filename, output);
+        // Mat output_bw = output > 128;
+        // imshow("scaled", output_bw);
+
+        Mat output_gs;
+        cvtColor(output, output_gs, CV_RGB2GRAY);
+        // imshow("scaled", output_gs)
+        imwrite(PROCESSED + filename, output_gs);
+
+        // imwrite(PROCESSED + filename, output);
         // imshow("scaled", output);
         // waitKey(0);
     }

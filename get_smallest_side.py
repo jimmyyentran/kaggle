@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 from scipy.interpolate import UnivariateSpline
 import numpy as np
 
-#  filename = os.path.join('images', 'processed_manual')
+filename = os.path.join('images', 'processed_manual')
 #  filename = os.path.join('images', 'processed_2')
 mini = 1000
 maxi = 0

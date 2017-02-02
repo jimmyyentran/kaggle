@@ -1,8 +1,4 @@
-
 # coding: utf-8
-
-# In[1]:
-
 from scipy import misc
 import numpy as np
 import pandas as pd

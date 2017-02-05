@@ -163,6 +163,8 @@ class ImageRecognition:
             print "Test Accuracy:", accuracy.eval({x: self.test_image, y: self.test_labels})
             predict_labels = pred_labels.eval(feed_dict={x: self.test_image})
             prediction = pred.eval(feed_dict={x: self.test_image})
+            train_labels = pred_labels.eval(feed_dict={x: self.train})
+            train = pred.eval(feed_dict={x: self.train})
             #  print prediction2.eval(feed_dict={x: self.test_image})[0]
 
         print predict_labels
@@ -177,11 +179,11 @@ if __name__ == "__main__":
     ir.cv(790)
     ir.mp(
             learning_rate = 0.0008,
-            training_epochs = 2,
+            training_epochs = 10,
             batch_size = 100,
             display_step = 1,
             num_examples = 790,
-            n_hidden_1 = 1000,
-            n_hidden_2 = 1000,
+            n_hidden_1 = 3000,
+            n_hidden_2 = 3000,
             n_classes = 99
     )

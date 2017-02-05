@@ -31,8 +31,8 @@ cv::Mat resizeKeepAspectRatio(const cv::Mat &input, const cv::Size &dstSize, con
 int main(){
     String DIRECTORY = "images/processed_manual/";
     String EXTENSION = "jpg";
-    String PROCESSED = "images/processed_2/";
-    double SIDE_LENGTH = 350;
+    String PROCESSED = "images/processed_100/"; //Where to save
+    double SIDE_LENGTH = 100;
     Scalar BLACK = Scalar(0,0,0);
     int IMAGE_COUNT = 1584;
     for (int i = 1; i <= IMAGE_COUNT; ++i) {

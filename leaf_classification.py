@@ -19,7 +19,7 @@ class ImageRecognition:
     def process_images(self, single_side, num_images, image_dir, save=False):
         # input parameters
         n_input = single_side * single_side
-        self.n_input = n_input
+        self.n_input = n_input + 192
 
         train_im = np.zeros(shape=(num_images, n_input))  # initiate array
         for i in range(1, num_images):
@@ -38,14 +38,16 @@ class ImageRecognition:
         labels = labels.as_matrix()  # convert dataframe to matrix
         print labels.shape
 
-        train_and_label = np.hstack((train, labels))  # combine matrix column-wise
+        additional = train_csv.drop(['id', 'species'], axis=1).as_matrix()
+
+        train_and_label = np.hstack((train, additional, labels))  # combine matrix column-wise
 
         self.data = np.column_stack((train_and_label, train_csv['id']))
 
         if (save):
-            with open('data_' + str(single_side) + '.pkl', 'wb') as output:
+            with open('data_additional_' + str(single_side) + '.pkl', 'wb') as output:
                 pickle.dump(self.data, output, -1)
-                pickle.dump(n_input, output, -1)
+                pickle.dump(self.n_input, output, -1)
 
     def load_processed_data(self, data_dir):
         with open(data_dir, 'rb') as input:
@@ -221,9 +223,9 @@ class ImageRecognition:
 
         side = int(math.sqrt(self.n_input))
 
-        with tf.name_scope('input_reshape'):
-            image_shaped_input = tf.reshape(x, [-1, side, side, 1])
-            tf.summary.image('input', image_shaped_input, 10)
+        # with tf.name_scope('input_reshape'):
+        #     image_shaped_input = tf.reshape(x, [-1, side, side, 1])
+        #     tf.summary.image('input', image_shaped_input, 10)
 
         # We can't initialize these variables to 0 - the network will get stuck.
         def weight_variable(shape):
@@ -356,9 +358,11 @@ class ImageRecognition:
 if __name__ == "__main__":
     ir = ImageRecognition()
     # ir.process_images(100, 1584, 'images/processed_100/', True)
+    # ir.process_images(100, 1584, 'images/processed_100/', True)
     # ir.process_images(350, 1584, 'images/processed_350/', True)
     # ir.load_processed_data('data_100.pkl')
-    ir.load_processed_data('data_100.pkl')
+    # ir.load_processed_data('data_100.pkl')
+    ir.load_processed_data('data_additional_100.pkl')
     ir.cv(800)
     ir.training(
         learning_rate=0.001,

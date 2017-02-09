@@ -4,10 +4,12 @@ import pickle
 import numpy as np
 import pandas as pd
 import tensorflow as tf
+import matplotlib.pyplot as plt
 import math
 from time import gmtime, strftime
 from IPython import embed
 from scipy import misc
+
 
 
 class ImageRecognition:
@@ -38,7 +40,7 @@ class ImageRecognition:
         labels = labels.as_matrix()  # convert dataframe to matrix
         print labels.shape
 
-        additional = train_csv.drop(['id', 'species'], axis=1).as_matrix()
+        additional = train_csv.drop(['id', 'species'], axis=1).as_matrix() * 255
 
         train_and_label = np.hstack((train, additional, labels))  # combine matrix column-wise
 
@@ -191,7 +193,7 @@ class ImageRecognition:
         begin = (self.current_step % modulus) * batch_size
         end = begin + batch_size
         self.current_step += 1
-        print "train[{},{}]".format(begin, end)
+        print "Epoch {}. train[{},{}]".format(self.current_step / modulus, begin, end)
         return self.train[begin:end], self.labels[begin:end]
 
 
@@ -250,7 +252,25 @@ class ImageRecognition:
                 tf.summary.scalar('min', tf.reduce_min(var))
                 tf.summary.histogram('histogram', var)
 
-        def nn_layer(input_tensor, input_dim, output_dim, layer_name, act=tf.nn.relu):
+        def maxpool2d(x, k=2):
+            # MaxPool2D wrapper
+            return tf.nn.max_pool(x, ksize=[1, k, k, 1], strides=[1, k, k, 1], padding='SAME')
+
+        def plotNNFilter(units):
+            filters = units.shape[3]
+            plt.figure(1, figsize=(20,20))
+            n_columns = 6
+            n_rows = math.ceil(filters / n_columns) + 1
+            for i in range(filters):
+                plt.subplot(n_rows, n_columns, i+1)
+                plt.title('Filter ' + str(i))
+                plt.imshow(units[0,:,:,i], interpolation="nearest", cmap="gray")
+
+        def getActivations(layer,stimuli):
+            units = sess.run(layer,feed_dict={x:np.reshape(stimuli,[1,784],order='F'),keep_prob:1.0})
+            plotNNFilter(units)
+
+        def nn_layer(input_tensor, input_dim, output_dim, layer_name, conv2d=False, act=tf.nn.relu):
             """Reusable code for making a simple neural net layer.
             It does a matrix multiply, bias add, and then uses relu to nonlinearize.
             It also sets up name scoping so that the resultant graph is easy to read,
@@ -260,27 +280,54 @@ class ImageRecognition:
             with tf.name_scope(layer_name):
                 # This Variable will hold the state of the weights for the layer
                 with tf.name_scope('weights'):
-                    weights = weight_variable([input_dim, output_dim])
+                    if conv2d:
+                        conv_size = 5
+                        weights = tf.Variable(tf.random_normal([conv_size, conv_size, input_dim,
+                                                                output_dim]))
+                    else:
+                        weights = weight_variable([input_dim, output_dim])
                     variable_summaries(weights)
                 with tf.name_scope('biases'):
                     biases = bias_variable([output_dim])
                     variable_summaries(biases)
                 with tf.name_scope('Wx_plus_b'):
-                    preactivate = tf.matmul(input_tensor, weights) + biases
+                    if conv2d:
+                        strides = 1
+                        preactivate = tf.nn.conv2d(input_tensor, weights, strides=[1, strides,
+                                                                                   strides, 1],
+                                                   padding='SAME')
+                    else:
+                        preactivate = tf.matmul(input_tensor, weights)
+                    preactivate += biases
                     tf.summary.histogram('pre_activations', preactivate)
                 activations = act(preactivate, name='activation')
                 tf.summary.histogram('activations', activations)
                 return activations
 
-        hidden1 = nn_layer(x, self.n_input, n_hidden_1, 'layer1')
+        # hidden1 = nn_layer(x, self.n_input, n_hidden_1, 'layer1')
+        # hidden2 = nn_layer(hidden1, n_hidden_1, n_hidden_2, 'layer2')
+        # hidden3 = nn_layer(hidden2, n_hidden_2, n_hidden_2, 'layer3')
+
+        x = tf.reshape(x, shape=[-1, side, side, 1])
+
+        conv1 = nn_layer(x, 1, 32, 'layer1', conv2d=True)
+        conv1 = maxpool2d(conv1, k=2)
+
+        conv2 = nn_layer(conv1, 32, 64, 'layer2', conv2d=True)
+        conv2 = maxpool2d(conv2, k=2)
+
+        fc1 = tf.reshape(conv2, [-1, 25*25*64])
+        fc1 = nn_layer(fc1, 25*25*64, 1024, 'fc_layer1')
 
         with tf.name_scope('dropout'):
             keep_prob = tf.placeholder(tf.float32)
             tf.summary.scalar('dropout_keep_probability', keep_prob)
-            dropped = tf.nn.dropout(hidden1, keep_prob)
+            # dropped = tf.nn.dropout(hidden2, keep_prob)
+            # dropped = tf.nn.dropout(hidden3, keep_prob)
+            dropped = tf.nn.dropout(fc1, keep_prob)
 
         # Do not apply softmax activation yet, see below.
-        y = nn_layer(dropped, n_hidden_1, n_classes, 'layer2', act=tf.identity)
+        y = nn_layer(dropped, 1024, n_classes, 'output', act=tf.identity)
 
         with tf.name_scope('cross_entropy'):
             # The raw formulation of cross-entropy,
@@ -312,8 +359,8 @@ class ImageRecognition:
         # Merge all the summaries and write them out to /tmp/tensorflow/mnist/logs/mnist_with_summaries (by default)
         merged = tf.summary.merge_all()
         curr_time = str(strftime("%m-%d-%Y_%H:%M:%S", gmtime()))
-        train_writer = tf.summary.FileWriter('train/' + curr_time, sess.graph)
-        test_writer = tf.summary.FileWriter('test/' + curr_time)
+        train_writer = tf.summary.FileWriter('output/train_' + curr_time, sess.graph)
+        test_writer = tf.summary.FileWriter('output/test_' + curr_time)
         tf.global_variables_initializer().run()
 
         # Train the model, and also write summaries.
@@ -325,10 +372,12 @@ class ImageRecognition:
             # if train or FLAGS.fake_data:
             if train:
                 xs, ys = self.next_batch(100)
+                xs = np.reshape(xs, [-1, 100, 100, 1])
                 k = 0.9
             else:
                 # xs, ys = mnist.test.images, mnist.test.labels
                 xs, ys = self.test_image, self.test_labels
+                xs = np.reshape(xs, [-1, 100, 100, 1])
                 k = 1.0
             return {x: xs, y_: ys, keep_prob: k}
 
@@ -361,15 +410,15 @@ if __name__ == "__main__":
     # ir.process_images(100, 1584, 'images/processed_100/', True)
     # ir.process_images(350, 1584, 'images/processed_350/', True)
     # ir.load_processed_data('data_100.pkl')
-    # ir.load_processed_data('data_100.pkl')
-    ir.load_processed_data('data_additional_100.pkl')
+    ir.load_processed_data('data_100.pkl')
+    # ir.load_processed_data('data_additional_100.pkl')
     ir.cv(800)
     ir.training(
         learning_rate=0.001,
-        training_epochs=100,
+        training_epochs=101,
         batch_size=100,
         display_step=1,
-        n_hidden_1=1000,
-        n_hidden_2=3000,
+        n_hidden_1=10000,
+        n_hidden_2=10000,
         n_classes=99
     )

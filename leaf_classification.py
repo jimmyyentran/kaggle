@@ -4,10 +4,10 @@ import pickle
 import numpy as np
 import pandas as pd
 import tensorflow as tf
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 import math
 from time import gmtime, strftime
-from IPython import embed
+#from IPython import embed
 from scipy import misc
 
 
@@ -103,7 +103,7 @@ class ImageRecognition:
                 tf.summary.scalar('stddev', stddev)
                 tf.summary.scalar('max', tf.reduce_max(var))
                 tf.summary.scalar('min', tf.reduce_min(var))
-                tf.summary.histogram('histogram', var)
+                #  tf.summary.histogram('histogram', var)
 
         # Create model
         def multilayer_perceptron(x, weights, biases):
@@ -138,7 +138,7 @@ class ImageRecognition:
         optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate).minimize(cost)
 
         # Initializing the variables
-        init = tf.initialize_all_variables()  # used older version of global_variables_initializer
+        #  init = tf.initialize_all_variables() # used older version of global_variables_initializer
 
         pred_labels = tf.argmax(pred, 1)
 
@@ -182,7 +182,6 @@ class ImageRecognition:
             prediction = pred.eval(feed_dict={x: self.test_image})
             train_labels = pred_labels.eval(feed_dict={x: self.train})
             train = pred.eval(feed_dict={x: self.train})
-            #  print prediction2.eval(feed_dict={x: self.test_image})[0]
 
         print predict_labels
         print prediction
@@ -215,6 +214,7 @@ class ImageRecognition:
         n_hidden_2 = kwargs['n_hidden_2']
         n_classes = kwargs['n_classes']
 
+        # sess = tf.InteractiveSession(config=tf.ConfigProto(log_device_placement=True))
         sess = tf.InteractiveSession()
         # Create a multilayer model.
 
@@ -250,7 +250,7 @@ class ImageRecognition:
                 tf.summary.scalar('stddev', stddev)
                 tf.summary.scalar('max', tf.reduce_max(var))
                 tf.summary.scalar('min', tf.reduce_min(var))
-                tf.summary.histogram('histogram', var)
+                #  tf.summary.histogram('histogram', var)
 
         def maxpool2d(x, k=2):
             # MaxPool2D wrapper
@@ -299,9 +299,9 @@ class ImageRecognition:
                     else:
                         preactivate = tf.matmul(input_tensor, weights)
                     preactivate += biases
-                    tf.summary.histogram('pre_activations', preactivate)
+                    #  tf.summary.histogram('pre_activations', preactivate)
                 activations = act(preactivate, name='activation')
-                tf.summary.histogram('activations', activations)
+                #  tf.summary.histogram('activations', activations)
                 return activations
 
         # hidden1 = nn_layer(x, self.n_input, n_hidden_1, 'layer1')
@@ -415,7 +415,7 @@ if __name__ == "__main__":
     ir.cv(800)
     ir.training(
         learning_rate=0.001,
-        training_epochs=101,
+        training_epochs=1001,
         batch_size=100,
         display_step=1,
         n_hidden_1=10000,

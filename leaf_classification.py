@@ -4,77 +4,100 @@ import pickle
 import numpy as np
 import pandas as pd
 import tensorflow as tf
-#import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 import math
 from time import gmtime, strftime
-#from IPython import embed
+from IPython import embed
 from scipy import misc
-
+from sklearn.model_selection import KFold
 
 
 class ImageRecognition:
     def __init__(self):
         # self.data is in order of [1D image, one-hot labels, identifier]
         self.current_step = 0
+        self.train_index = []
+        self.test_index = []
         pass
 
     def process_images(self, single_side, num_images, image_dir, save=False):
         # input parameters
-        n_input = single_side * single_side
-        self.n_input = n_input + 192
+        self.n_input = single_side * single_side
+        # self.n_input = n_input + 192
 
-        train_im = np.zeros(shape=(num_images, n_input))  # initiate array
+        train_im = np.zeros(shape=(num_images, self.n_input))  # initiate array
         for i in range(1, num_images):
             im = misc.imread(image_dir + str(i) + ".jpg")  # transform to matrix
             train_im[i - 1] = im.ravel()  # Shift index due to numpy's zero-indexing
-        print train_im.shape
+        print "All 1D images: ", train_im.shape
 
         train_csv = pd.read_csv('train.csv')
-        print train_csv.shape  # training has the "species" column
+        print "Train csv", train_csv.shape  # training has the "species" column
 
         train_idx = train_csv['id'] - 1  # subtract 1 to take care of zero-indexing
         train = train_im[train_idx]  # extract training pictures from images
-        print train.shape
+        print "Train ID images:", train.shape
 
         labels = pd.get_dummies(train_csv['species'])  # one-hot encoding
+        self.one_hot_names = labels.columns
         labels = labels.as_matrix()  # convert dataframe to matrix
-        print labels.shape
+        print "Labels one-hot", labels.shape
 
-        additional = train_csv.drop(['id', 'species'], axis=1).as_matrix() * 255
+        # additional = train_csv.drop(['id', 'species'], axis=1).as_matrix() * 255
 
-        train_and_label = np.hstack((train, additional, labels))  # combine matrix column-wise
+        # train_and_label = np.hstack((train, additional, labels))  # combine matrix column-wise
 
-        self.data = np.column_stack((train_and_label, train_csv['id']))
+        # self.data = np.column_stack((train_and_label, train_csv['id']))
+        self.data = np.column_stack((train, labels))
+        self.identifier = train_csv['id']
 
         if (save):
-            with open('data_additional_' + str(single_side) + '.pkl', 'wb') as output:
+            # with open('data_additional_' + str(single_side) + '.pkl', 'wb') as output:
+            with open('data_no_id_' + str(single_side) + '.pkl', 'wb') as output:
                 pickle.dump(self.data, output, -1)
+                pickle.dump(self.identifier, output, -1)
+                pickle.dump(self.one_hot_names, output, -1)
                 pickle.dump(self.n_input, output, -1)
 
     def load_processed_data(self, data_dir):
         with open(data_dir, 'rb') as input:
             self.data = pickle.load(input)
+            self.identifier = pickle.load(input)
+            self.one_hot_names = pickle.load(input)
             self.n_input = pickle.load(input)
 
-    def cv(self, train_num):
-        self.train_num = train_num
-        temp = np.copy(self.data)
-        np.random.shuffle(temp)
+    def cv(self, num_splits):
+        # K-fold with shuffle
+        kf = KFold(n_splits=num_splits, shuffle=True)
 
-        self.identifier_train = temp[:, -1][:train_num]
-        self.identifier_test = temp[:, -1][train_num:]
+        # for train, test in kf.split(temp):
+        for train, test in kf.split(self.data):
+            self.train_index.append(train)
+            self.test_index.append(test)
 
-        temp = temp[:, :-1]
+    def train(self, params):
+        for i in range(len(self.train_index)):
+            cv_train_data = self.data[self.train_index[i]]
+            cv_test_data = self.data[self.test_index[i]]
 
-        self.train = temp[:, :self.n_input][:train_num]
-        self.labels = temp[:, self.n_input:][:train_num]
-        self.test_image = temp[:, :self.n_input][train_num:]
-        self.test_labels = temp[:, self.n_input:][train_num:]
+            train = cv_train_data[:, :self.n_input]
+            train_labels = cv_train_data[:, self.n_input:]
+            test = cv_test_data[:, :self.n_input]
+            test_labels = cv_test_data[:, self.n_input:]
 
-        print "Train: {}".format(self.train.shape)
-        print "Labels: {}".format(self.labels.shape)
-        print "Test image: {}".format(self.test_image.shape)
-        print "Test labels: {}".format(self.test_labels.shape)
+            print "Set %s)" % (i + 1) + \
+                  " Train: {}".format(train.shape) + \
+                  " Train Labels: {}".format(train_labels.shape) + \
+                  " Test: {}".format(test.shape) + \
+                  " Test labels: {}".format(test_labels.shape)
+
+            params.update(dict(train=train,
+                               train_labels=train_labels,
+                               test=test,
+                               test_labels=test_labels,
+                               n_input=self.n_input))
+
+            Training(**params).model()
 
     def mp(self, **kwargs):
         # Parameters
@@ -186,34 +209,38 @@ class ImageRecognition:
         print predict_labels
         print prediction
 
+
+class Training():
+    def __init__(self, **kwargs):
+        # Train Parameters
+        self.learning_rate = kwargs['learning_rate']
+        self.training_epochs = kwargs['training_epochs']
+        self.batch_size = kwargs['batch_size']
+        self.display_step = kwargs['display_step']
+
+        # Network Parameters
+        self.n_input = kwargs['n_input']
+        self.n_hidden_1 = kwargs['n_hidden_1']
+        self.n_hidden_2 = kwargs['n_hidden_2']
+        self.n_classes = kwargs['n_classes']
+
+        # Data
+        self.train = kwargs['train']
+        self.train_labels = kwargs['train_labels']
+        self.test = kwargs['test']
+        self.test_labels = kwargs['test_labels']
+
+        self.current_step = 0
+
     def next_batch(self, batch_size):
-        # Keep looping
         modulus = self.train.shape[0] / batch_size
         begin = (self.current_step % modulus) * batch_size
         end = begin + batch_size
         self.current_step += 1
         print "Epoch {}. train[{},{}]".format(self.current_step / modulus, begin, end)
-        return self.train[begin:end], self.labels[begin:end]
+        return self.train[begin:end], self.train_labels[begin:end]
 
-
-    def training(self, **kwargs):
-        # Import data
-        # mnist = input_data.read_data_sets(FLAGS.data_dir,
-        #                                   one_hot=True,
-        #                                   fake_data=FLAGS.fake_data)
-
-        # Parameters
-        learning_rate = kwargs['learning_rate']
-        training_epochs = kwargs['training_epochs']
-        batch_size = kwargs['batch_size']
-        display_step = kwargs['display_step']
-
-        # Network Parameters
-        # n_input: from class
-        n_hidden_1 = kwargs['n_hidden_1']
-        n_hidden_2 = kwargs['n_hidden_2']
-        n_classes = kwargs['n_classes']
-
+    def model(self):
         # sess = tf.InteractiveSession(config=tf.ConfigProto(log_device_placement=True))
         sess = tf.InteractiveSession()
         # Create a multilayer model.
@@ -221,7 +248,7 @@ class ImageRecognition:
         # Input placeholders
         with tf.name_scope('input'):
             x = tf.placeholder(tf.float32, [None, self.n_input], name='x-input')
-            y_ = tf.placeholder(tf.float32, [None, n_classes], name='y-input')
+            y_ = tf.placeholder(tf.float32, [None, self.n_classes], name='y-input')
 
         side = int(math.sqrt(self.n_input))
 
@@ -256,19 +283,20 @@ class ImageRecognition:
             # MaxPool2D wrapper
             return tf.nn.max_pool(x, ksize=[1, k, k, 1], strides=[1, k, k, 1], padding='SAME')
 
-        def plotNNFilter(units):
-            filters = units.shape[3]
-            plt.figure(1, figsize=(20,20))
-            n_columns = 6
-            n_rows = math.ceil(filters / n_columns) + 1
-            for i in range(filters):
-                plt.subplot(n_rows, n_columns, i+1)
-                plt.title('Filter ' + str(i))
-                plt.imshow(units[0,:,:,i], interpolation="nearest", cmap="gray")
+        # def plotNNFilter(units):
+        #     filters = units.shape[3]
+        #     plt.figure(1, figsize=(20, 20))
+        #     n_columns = 6
+        #     n_rows = math.ceil(filters / n_columns) + 1
+        #     for i in range(filters):
+        #         plt.subplot(n_rows, n_columns, i + 1)
+        #         plt.title('Filter ' + str(i))
+        #         plt.imshow(units[0, :, :, i], interpolation="nearest", cmap="gray")
 
-        def getActivations(layer,stimuli):
-            units = sess.run(layer,feed_dict={x:np.reshape(stimuli,[1,784],order='F'),keep_prob:1.0})
-            plotNNFilter(units)
+        # def getActivations(layer, stimuli):
+        #     units = sess.run(layer, feed_dict={x: np.reshape(stimuli, [1, 784], order='F'),
+        #                                        keep_prob: 1.0})
+        #     plotNNFilter(units)
 
         def nn_layer(input_tensor, input_dim, output_dim, layer_name, conv2d=False, act=tf.nn.relu):
             """Reusable code for making a simple neural net layer.
@@ -316,8 +344,8 @@ class ImageRecognition:
         conv2 = nn_layer(conv1, 32, 64, 'layer2', conv2d=True)
         conv2 = maxpool2d(conv2, k=2)
 
-        fc1 = tf.reshape(conv2, [-1, 25*25*64])
-        fc1 = nn_layer(fc1, 25*25*64, 1024, 'fc_layer1')
+        fc1 = tf.reshape(conv2, [-1, 25 * 25 * 64])
+        fc1 = nn_layer(fc1, 25 * 25 * 64, 1024, 'fc_layer1')
 
         with tf.name_scope('dropout'):
             keep_prob = tf.placeholder(tf.float32)
@@ -327,7 +355,7 @@ class ImageRecognition:
             dropped = tf.nn.dropout(fc1, keep_prob)
 
         # Do not apply softmax activation yet, see below.
-        y = nn_layer(dropped, 1024, n_classes, 'output', act=tf.identity)
+        y = nn_layer(dropped, 1024, self.n_classes, 'output', act=tf.identity)
 
         with tf.name_scope('cross_entropy'):
             # The raw formulation of cross-entropy,
@@ -346,7 +374,7 @@ class ImageRecognition:
         tf.summary.scalar('cross_entropy', cross_entropy)
 
         with tf.name_scope('train'):
-            train_step = tf.train.AdamOptimizer(learning_rate).minimize(
+            train_step = tf.train.AdamOptimizer(self.learning_rate).minimize(
                 cross_entropy)
 
         with tf.name_scope('accuracy'):
@@ -376,12 +404,12 @@ class ImageRecognition:
                 k = 0.9
             else:
                 # xs, ys = mnist.test.images, mnist.test.labels
-                xs, ys = self.test_image, self.test_labels
+                xs, ys = self.test, self.test_labels
                 xs = np.reshape(xs, [-1, 100, 100, 1])
                 k = 1.0
             return {x: xs, y_: ys, keep_prob: k}
 
-        for i in range(training_epochs):
+        for i in range(self.training_epochs):
             if i % 10 == 0:  # Record summaries and test-set accuracy
                 summary, acc = sess.run([merged, accuracy], feed_dict=feed_dict(False))
                 test_writer.add_summary(summary, i)
@@ -403,22 +431,19 @@ class ImageRecognition:
         train_writer.close()
         test_writer.close()
 
-
 if __name__ == "__main__":
     ir = ImageRecognition()
     # ir.process_images(100, 1584, 'images/processed_100/', True)
-    # ir.process_images(100, 1584, 'images/processed_100/', True)
     # ir.process_images(350, 1584, 'images/processed_350/', True)
     # ir.load_processed_data('data_100.pkl')
-    ir.load_processed_data('data_100.pkl')
     # ir.load_processed_data('data_additional_100.pkl')
-    ir.cv(800)
-    ir.training(
-        learning_rate=0.001,
-        training_epochs=1001,
-        batch_size=100,
-        display_step=1,
-        n_hidden_1=10000,
-        n_hidden_2=10000,
-        n_classes=99
-    )
+    ir.load_processed_data('data_no_id_100.pkl')
+    ir.cv(5)
+    params = dict(learning_rate=0.001,
+                  training_epochs=1001,
+                  batch_size=100,
+                  display_step=1,
+                  n_hidden_1=10000,
+                  n_hidden_2=10000,
+                  n_classes=99)
+    ir.train(params)

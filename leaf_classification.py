@@ -21,7 +21,6 @@ class ImageRecognition:
     def process_images(self, single_side, num_images, image_dir, save=False):
         # input parameters
         self.n_input = single_side * single_side
-        # self.n_input = n_input + 192
 
         train_im = np.zeros(shape=(num_images, self.n_input))  # initiate array
         for i in range(1, num_images):
@@ -96,116 +95,6 @@ class ImageRecognition:
                                n_input=self.n_input))
 
             Trainer(**params).generate_model('cnn')
-
-    def mp(self, **kwargs):
-        # Parameters
-        learning_rate = kwargs['learning_rate']
-        training_epochs = kwargs['training_epochs']
-        batch_size = kwargs['batch_size']
-        display_step = kwargs['display_step']
-
-        # Network Parameters
-        # n_input: from class
-        n_hidden_1 = kwargs['n_hidden_1']
-        n_hidden_2 = kwargs['n_hidden_2']
-        n_classes = kwargs['n_classes']
-
-        # tf Graph input
-        x = tf.placeholder("float", [None, self.n_input])
-        y = tf.placeholder("float", [None, n_classes])
-
-        def variable_summaries(var):
-            """Attach a lot of summaries to a Tensor (for TensorBoard visualization)."""
-            with tf.name_scope('summaries'):
-                mean = tf.reduce_mean(var)
-                tf.summary.scalar('mean', mean)
-                with tf.name_scope('stddev'):
-                    stddev = tf.sqrt(tf.reduce_mean(tf.square(var - mean)))
-                tf.summary.scalar('stddev', stddev)
-                tf.summary.scalar('max', tf.reduce_max(var))
-                tf.summary.scalar('min', tf.reduce_min(var))
-                #  tf.summary.histogram('histogram', var)
-
-        # Create model
-        def multilayer_perceptron(x, weights, biases):
-            # Hidden layer with RELU activation
-            layer_1 = tf.add(tf.matmul(x, weights['h1']), biases['b1'])
-            layer_1 = tf.nn.relu(layer_1)
-            # Hidden layer with RELU activation
-            layer_2 = tf.add(tf.matmul(layer_1, weights['h2']), biases['b2'])
-            layer_2 = tf.nn.relu(layer_2)
-            # Output layer with linear activation
-            out_layer = tf.matmul(layer_2, weights['out']) + biases['out']
-            return out_layer
-
-        # Store layers weight & bias
-        weights = {
-            'h1': tf.Variable(tf.random_normal([self.n_input, n_hidden_1])),
-            'h2': tf.Variable(tf.random_normal([n_hidden_1, n_hidden_2])),
-            'out': tf.Variable(tf.random_normal([n_hidden_2, n_classes]))
-        }
-
-        biases = {
-            'b1': tf.Variable(tf.random_normal([n_hidden_1])),
-            'b2': tf.Variable(tf.random_normal([n_hidden_2])),
-            'out': tf.Variable(tf.random_normal([n_classes]))
-        }
-
-        # Construct model
-        pred = multilayer_perceptron(x, weights, biases)
-
-        # Define loss and optimizer
-        cost = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=pred, labels=y))
-        optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate).minimize(cost)
-
-        # Initializing the variables
-        #  init = tf.initialize_all_variables() # used older version of global_variables_initializer
-
-        pred_labels = tf.argmax(pred, 1)
-
-        # Launch the graph
-        with tf.Session() as sess:
-            sess.run(init)
-
-            # Training cycle
-            for epoch in range(training_epochs):
-                avg_cost = 0.
-                total_batch = int(self.train_num / batch_size)
-                # Loop over all batches
-                for i in range(total_batch):
-                    begin = total_batch * batch_size
-                    end = begin + batch_size
-                    batch_x = self.train[begin:end]
-                    batch_y = self.labels[begin:end]
-                    # Run optimization op (backprop) and cost op (to get loss value)
-                    _, c = sess.run([optimizer, cost], feed_dict={x: batch_x,
-                                                                  y: batch_y})
-                    # Compute average loss
-                    avg_cost += c / total_batch
-                # Display logs per epoch step
-                if epoch % display_step == 0:
-                    #  print "Epoch:", '%04d' % (epoch+1), "cost=", "{:.9f}".format(avg_cost)
-                    print "Epoch:", '%04d' % (epoch + 1), "cost=", "{:.9f}".format(c)
-                    correct_prediction = tf.equal(tf.argmax(pred, 1), tf.argmax(y, 1))
-                    accuracy = tf.reduce_mean(tf.cast(correct_prediction, "float"))
-                    print "Train Accuracy:", accuracy.eval({x: self.train, y: self.labels})
-                    print "Test Accuracy:", accuracy.eval({x: self.test_image, y: self.test_labels})
-                    print
-            print "Optimization Finished!"
-
-            # Test model
-            correct_prediction = tf.equal(tf.argmax(pred, 1), tf.argmax(y, 1))
-            # Calculate accuracy
-            accuracy = tf.reduce_mean(tf.cast(correct_prediction, "float"))
-            print "Train Accuracy:", accuracy.eval({x: self.train, y: self.labels})
-            print "Test Accuracy:", accuracy.eval({x: self.test_image, y: self.test_labels})
-            predict_labels = pred_labels.eval(feed_dict={x: self.test_image})
-            prediction = pred.eval(feed_dict={x: self.test_image})
-            train_labels = pred_labels.eval(feed_dict={x: self.train})
-            train = pred.eval(feed_dict={x: self.train})
-
-        print predict_labels
-        print prediction
 
 if __name__ == "__main__":
     ir = ImageRecognition()

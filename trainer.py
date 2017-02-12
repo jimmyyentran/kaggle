@@ -76,14 +76,9 @@ class Trainer():
         if model.lower() == 'cnn':
             model_function = self.cnn
 
-        # sess = tf.InteractiveSession(config=tf.ConfigProto(log_device_placement=True))
         sess = tf.InteractiveSession()
 
-        # Input placeholders
-        # x, y_ = inputs(self.n_input, self.n_classes)
-        # keep_prob = keep_probability()
-
-        # y, model_data = model_function(x, keep_prob)
+        # Model tensors
         x, y_, keep_prob, y, input_transform = model_function(self.n_input, self.n_classes)
 
         cross_entropy = loss(y, y_)
@@ -92,11 +87,15 @@ class Trainer():
 
         correct_prediction, accuracy = measure_accuracy(y, y_)
 
+        # Summary handler
         merged = tf.summary.merge_all()
         curr_time = str(strftime("%m-%d-%Y_%H:%M:%S", gmtime()))
         train_writer = tf.summary.FileWriter('output/train_' + curr_time, sess.graph)
         test_writer = tf.summary.FileWriter('output/test_' + curr_time)
         tf.global_variables_initializer().run()
+
+        # Saver
+        saver = tf.train.Saver()
 
         # Train the model, and also write summaries.
         # Every ith step, measure test-set accuracy, and write test summaries
@@ -133,6 +132,7 @@ class Trainer():
                                           run_metadata=run_metadata)
                     train_writer.add_run_metadata(run_metadata, 'step%03d' % i)
                     train_writer.add_summary(summary, i)
+                    saver.save(sess, 'output/model_' + curr_time, global_step=i)
                     print('Adding run metadata for', i)
                 else:  # Record a summary
                     summary, _ = sess.run([merged, train_step], feed_dict=feed_dict(True))

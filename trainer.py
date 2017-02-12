@@ -141,3 +141,6 @@ class Trainer():
                     train_writer.add_summary(summary, i)
         train_writer.close()
         test_writer.close()
+
+        # reset for next batch
+        tf.reset_default_graph()

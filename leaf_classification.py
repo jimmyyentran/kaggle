@@ -105,7 +105,7 @@ if __name__ == "__main__":
     ir.load_processed_data('data_no_id_100.pkl')
     ir.cv(5)
     params = dict(learning_rate=0.001,
-                  training_epochs=1001,
+                  training_epochs=10,
                   batch_size=100,
                   display_step=1,
                   n_hidden_1=10000,

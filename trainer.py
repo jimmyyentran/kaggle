@@ -33,6 +33,7 @@ class Trainer():
     def next_batch(self, batch_size):
         if not self.modulus_set:
             self.modulus = int(math.ceil(self.train.shape[0] / float(batch_size)))
+            self.modulus_set = True
         begin = (self.current_step % self.modulus) * batch_size
         end = begin + batch_size
         if end >= self.train_len:

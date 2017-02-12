@@ -1,4 +1,6 @@
 import tensorflow as tf
+import math
+import numpy as np
 
 # We can't initialize these variables to 0 - the network will get stuck.
 def weight_variable(shape):
@@ -131,3 +133,32 @@ def measure_accuracy(logits, labels):
             accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
     tf.summary.scalar('accuracy', accuracy)
     return correct_prediction, accuracy
+
+def cnn(n_input, n_classes):
+    side = int(math.sqrt(n_input))
+
+    def input_transform(x):
+        if type(x) is tf.Tensor:
+            return tf.reshape(x, shape=[-1, side, side, 1])
+        else:
+            return np.reshape(x, [-1, side, side, 1])
+
+    keep_prob = keep_probability()
+    x, y_ = inputs(n_input, n_classes)
+
+    x = input_transform(x)
+
+    conv1 = nn_layer(x, 1, 32, 'layer1', conv2d=True)
+    conv1 = maxpool2d(conv1, k=2)
+
+    conv2 = nn_layer(conv1, 32, 64, 'layer2', conv2d=True)
+    conv2 = maxpool2d(conv2, k=2)
+
+    fc1 = tf.reshape(conv2, [-1, 25 * 25 * 64])
+    fc1 = nn_layer(fc1, 25 * 25 * 64, 1024, 'fc_layer1')
+
+    # Do not apply softmax activation yet, see loss()
+    dropped = dropout(fc1, keep_prob)
+    y = nn_layer(dropped, 1024, n_classes, 'output', act=tf.identity)
+
+    return x, y_, keep_prob, y, input_transform

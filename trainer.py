@@ -3,7 +3,7 @@ import numpy as np
 from time import strftime, gmtime
 import tensorflow as tf
 
-import model_helper
+import model
 
 
 class Trainer():
@@ -44,49 +44,49 @@ class Trainer():
         self.current_step += 1
         return self.train[begin:end], self.train_labels[begin:end]
 
-    def cnn(self, n_input, n_classes):
-        side = int(math.sqrt(self.n_input))
+    # def cnn(self, n_input, n_classes):
+    #     side = int(math.sqrt(self.n_input))
+    #
+    #     def input_transform(x):
+    #         if type(x) is tf.Tensor:
+    #             return tf.reshape(x, shape=[-1, side, side, 1])
+    #         else:
+    #             return np.reshape(x, [-1, side, side, 1])
+    #
+    #     keep_prob = model.keep_probability()
+    #     x, y_ = model.inputs(n_input, n_classes)
+    #
+    #     x = input_transform(x)
+    #
+    #     conv1 = model.nn_layer(x, 1, 32, 'layer1', conv2d=True)
+    #     conv1 = model.maxpool2d(conv1, k=2)
+    #
+    #     conv2 = model.nn_layer(conv1, 32, 64, 'layer2', conv2d=True)
+    #     conv2 = model.maxpool2d(conv2, k=2)
+    #
+    #     fc1 = tf.reshape(conv2, [-1, 25 * 25 * 64])
+    #     fc1 = model.nn_layer(fc1, 25 * 25 * 64, 1024, 'fc_layer1')
+    #
+    #     # Do not apply softmax activation yet, see loss()
+    #     dropped = model.dropout(fc1, keep_prob)
+    #     y = model.nn_layer(dropped, 1024, self.n_classes, 'output', act=tf.identity)
+    #
+    #     return x, y_, keep_prob, y, input_transform
 
-        def input_transform(x):
-            if type(x) is tf.Tensor:
-                return tf.reshape(x, shape=[-1, side, side, 1])
-            else:
-                return np.reshape(x, [-1, side, side, 1])
-
-        keep_prob = model_helper.keep_probability()
-        x, y_ = model_helper.inputs(n_input, n_classes)
-
-        x = input_transform(x)
-
-        conv1 = model_helper.nn_layer(x, 1, 32, 'layer1', conv2d=True)
-        conv1 = model_helper.maxpool2d(conv1, k=2)
-
-        conv2 = model_helper.nn_layer(conv1, 32, 64, 'layer2', conv2d=True)
-        conv2 = model_helper.maxpool2d(conv2, k=2)
-
-        fc1 = tf.reshape(conv2, [-1, 25 * 25 * 64])
-        fc1 = model_helper.nn_layer(fc1, 25 * 25 * 64, 1024, 'fc_layer1')
-
-        # Do not apply softmax activation yet, see loss()
-        dropped = model_helper.dropout(fc1, keep_prob)
-        y = model_helper.nn_layer(dropped, 1024, self.n_classes, 'output', act=tf.identity)
-
-        return x, y_, keep_prob, y, input_transform
-
-    def generate_model(self, model):
-        if model.lower() == 'cnn':
-            model_function = self.cnn
+    def generate_model(self, mdl):
+        if mdl.lower() == 'cnn':
+            model_function = model.cnn
 
         sess = tf.InteractiveSession()
 
         # Model tensors
         x, y_, keep_prob, y, input_transform = model_function(self.n_input, self.n_classes)
 
-        cross_entropy = model_helper.loss(y, y_)
+        cross_entropy = model.loss(y, y_)
 
-        train_step = model_helper.train(cross_entropy, self.learning_rate)
+        train_step = model.train(cross_entropy, self.learning_rate)
 
-        correct_prediction, accuracy = model_helper.measure_accuracy(y, y_)
+        correct_prediction, accuracy = model.measure_accuracy(y, y_)
 
         # Summary handler
         merged = tf.summary.merge_all()
@@ -114,9 +114,7 @@ class Trainer():
                 xs, ys = self.test, self.test_labels
                 k = 1.0
 
-            if model.lower() == 'cnn':
-                # side = 100
-                # xs = np.reshape(xs, [-1, side, side, 1])
+            if mdl.lower() == 'cnn':
                 xs = input_transform(xs)
 
             return {x: xs, y_: ys, keep_prob: k}

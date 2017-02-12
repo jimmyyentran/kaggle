@@ -1,6 +1,7 @@
 import math
 import numpy as np
 from time import strftime, gmtime
+
 from model_helper import *
 
 
@@ -42,25 +43,19 @@ class Trainer():
         self.current_step += 1
         return self.train[begin:end], self.train_labels[begin:end]
 
-
-    def generate_model(self, model):
-        if model.lower() == 'cnn':
-            self.cnn()
-
-    def cnn(self):
-        # sess = tf.InteractiveSession(config=tf.ConfigProto(log_device_placement=True))
-        sess = tf.InteractiveSession()
-
-        # Input placeholders
-        x, y_ = inputs(self.n_input, self.n_classes)
-
+    def cnn(self, n_input, n_classes):
         side = int(math.sqrt(self.n_input))
 
-        # hidden1 = nn_layer(x, self.n_input, n_hidden_1, 'layer1')
-        # hidden2 = nn_layer(hidden1, n_hidden_1, n_hidden_2, 'layer2')
-        # hidden3 = nn_layer(hidden2, n_hidden_2, n_hidden_2, 'layer3')
+        def input_transform(x):
+            if type(x) is tf.Tensor:
+                return tf.reshape(x, shape=[-1, side, side, 1])
+            else:
+                return np.reshape(x, [-1, side, side, 1])
 
-        x = tf.reshape(x, shape=[-1, side, side, 1])
+        keep_prob = keep_probability()
+        x, y_ = inputs(n_input, n_classes)
+
+        x = input_transform(x)
 
         conv1 = nn_layer(x, 1, 32, 'layer1', conv2d=True)
         conv1 = maxpool2d(conv1, k=2)
@@ -72,9 +67,24 @@ class Trainer():
         fc1 = nn_layer(fc1, 25 * 25 * 64, 1024, 'fc_layer1')
 
         # Do not apply softmax activation yet, see loss()
-        keep_prob = keep_probability()
         dropped = dropout(fc1, keep_prob)
         y = nn_layer(dropped, 1024, self.n_classes, 'output', act=tf.identity)
+
+        return x, y_, keep_prob, y, input_transform
+
+    def generate_model(self, model):
+        if model.lower() == 'cnn':
+            model_function = self.cnn
+
+        # sess = tf.InteractiveSession(config=tf.ConfigProto(log_device_placement=True))
+        sess = tf.InteractiveSession()
+
+        # Input placeholders
+        # x, y_ = inputs(self.n_input, self.n_classes)
+        # keep_prob = keep_probability()
+
+        # y, model_data = model_function(x, keep_prob)
+        x, y_, keep_prob, y, input_transform = model_function(self.n_input, self.n_classes)
 
         cross_entropy = loss(y, y_)
 
@@ -82,7 +92,6 @@ class Trainer():
 
         correct_prediction, accuracy = measure_accuracy(y, y_)
 
-        # Merge all the summaries and write them out to /tmp/tensorflow/mnist/logs/mnist_with_summaries (by default)
         merged = tf.summary.merge_all()
         curr_time = str(strftime("%m-%d-%Y_%H:%M:%S", gmtime()))
         train_writer = tf.summary.FileWriter('output/train_' + curr_time, sess.graph)
@@ -90,20 +99,23 @@ class Trainer():
         tf.global_variables_initializer().run()
 
         # Train the model, and also write summaries.
-        # Every 10th step, measure test-set accuracy, and write test summaries
+        # Every ith step, measure test-set accuracy, and write test summaries
         # All other steps, run train_step on training data, & add training summaries
         def feed_dict(train):
             """Make a TensorFlow feed_dict: maps data onto Tensor placeholders."""
             # if train or FLAGS.fake_data:
             if train:
                 xs, ys = self.next_batch(self.batch_size)
-                xs = np.reshape(xs, [-1, side, side, 1])
-                k = 0.9
+                k = self.keep_prob
             else:
                 # xs, ys = mnist.test.images, mnist.test.labels
                 xs, ys = self.test, self.test_labels
-                xs = np.reshape(xs, [-1, side, side, 1])
                 k = 1.0
+
+            if model.lower() == 'cnn':
+                # side = 100
+                # xs = np.reshape(xs, [-1, side, side, 1])
+                xs = input_transform(xs)
             return {x: xs, y_: ys, keep_prob: k}
 
         for i in range(self.training_epochs):

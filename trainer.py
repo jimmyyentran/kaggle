@@ -144,3 +144,6 @@ class Trainer():
 
         # reset for next batch
         tf.reset_default_graph()
+
+        # close and restore memory
+        sess.close()

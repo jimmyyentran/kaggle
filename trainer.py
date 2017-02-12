@@ -93,6 +93,8 @@ class Trainer():
         curr_time = str(strftime("%m-%d-%Y_%H:%M:%S", gmtime()))
         train_writer = tf.summary.FileWriter('output/train_' + curr_time, sess.graph)
         test_writer = tf.summary.FileWriter('output/test_' + curr_time)
+
+        # initialize the variables
         tf.global_variables_initializer().run()
 
         # Saver

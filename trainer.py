@@ -115,6 +115,8 @@ class Trainer():
                 # side = 100
                 # xs = np.reshape(xs, [-1, side, side, 1])
                 xs = input_transform(xs)
+
+            k = float(k)
             return {x: xs, y_: ys, keep_prob: k}
 
         for i in range(self.training_epochs):

@@ -1,8 +1,9 @@
 import math
 import numpy as np
 from time import strftime, gmtime
+import tensorflow as tf
 
-from model_helper import *
+import model_helper
 
 
 class Trainer():
@@ -52,23 +53,23 @@ class Trainer():
             else:
                 return np.reshape(x, [-1, side, side, 1])
 
-        keep_prob = keep_probability()
-        x, y_ = inputs(n_input, n_classes)
+        keep_prob = model_helper.keep_probability()
+        x, y_ = model_helper.inputs(n_input, n_classes)
 
         x = input_transform(x)
 
-        conv1 = nn_layer(x, 1, 32, 'layer1', conv2d=True)
-        conv1 = maxpool2d(conv1, k=2)
+        conv1 = model_helper.nn_layer(x, 1, 32, 'layer1', conv2d=True)
+        conv1 = model_helper.maxpool2d(conv1, k=2)
 
-        conv2 = nn_layer(conv1, 32, 64, 'layer2', conv2d=True)
-        conv2 = maxpool2d(conv2, k=2)
+        conv2 = model_helper.nn_layer(conv1, 32, 64, 'layer2', conv2d=True)
+        conv2 = model_helper.maxpool2d(conv2, k=2)
 
         fc1 = tf.reshape(conv2, [-1, 25 * 25 * 64])
-        fc1 = nn_layer(fc1, 25 * 25 * 64, 1024, 'fc_layer1')
+        fc1 = model_helper.nn_layer(fc1, 25 * 25 * 64, 1024, 'fc_layer1')
 
         # Do not apply softmax activation yet, see loss()
-        dropped = dropout(fc1, keep_prob)
-        y = nn_layer(dropped, 1024, self.n_classes, 'output', act=tf.identity)
+        dropped = model_helper.dropout(fc1, keep_prob)
+        y = model_helper.nn_layer(dropped, 1024, self.n_classes, 'output', act=tf.identity)
 
         return x, y_, keep_prob, y, input_transform
 
@@ -81,11 +82,11 @@ class Trainer():
         # Model tensors
         x, y_, keep_prob, y, input_transform = model_function(self.n_input, self.n_classes)
 
-        cross_entropy = loss(y, y_)
+        cross_entropy = model_helper.loss(y, y_)
 
-        train_step = train(cross_entropy, self.learning_rate)
+        train_step = model_helper.train(cross_entropy, self.learning_rate)
 
-        correct_prediction, accuracy = measure_accuracy(y, y_)
+        correct_prediction, accuracy = model_helper.measure_accuracy(y, y_)
 
         # Summary handler
         merged = tf.summary.merge_all()
@@ -116,7 +117,6 @@ class Trainer():
                 # xs = np.reshape(xs, [-1, side, side, 1])
                 xs = input_transform(xs)
 
-            k = float(k)
             return {x: xs, y_: ys, keep_prob: k}
 
         for i in range(self.training_epochs):

@@ -9,6 +9,7 @@ from IPython import embed
 from scipy import misc
 from sklearn.model_selection import KFold
 from trainer import Trainer
+from evaluator import Evaluator
 
 class ImageRecognition:
     def __init__(self):
@@ -73,7 +74,12 @@ class ImageRecognition:
             self.test_index.append(test)
 
     def train(self, params):
-        for i in range(len(self.train_index)):
+        if len(self.train_index) > params['train_times']:
+            min = params['train_times']
+        else:
+            min = len(self.train_index)
+
+        for i in range(min):
             cv_train_data = self.data[self.train_index[i]]
             cv_test_data = self.data[self.test_index[i]]
 
@@ -98,18 +104,33 @@ class ImageRecognition:
 
 if __name__ == "__main__":
     ir = ImageRecognition()
+    evaluate = False
+    train = True
     # ir.process_images(100, 1584, 'images/processed_100/', True)
     # ir.process_images(350, 1584, 'images/processed_350/', True)
     # ir.load_processed_data('data_100.pkl')
     # ir.load_processed_data('data_additional_100.pkl')
-    ir.load_processed_data('data_no_id_100.pkl')
-    ir.cv(5)
-    params = dict(learning_rate=0.001,
-                  training_epochs=10,
-                  batch_size=100,
-                  display_step=1,
-                  n_hidden_1=10000,
-                  n_hidden_2=10000,
-                  n_classes=99,
-                  keep_prob=0.9)
-    ir.train(params)
+    if train:
+        ir.load_processed_data('data_no_id_100.pkl')
+        ir.cv(10)
+        params = dict(learning_rate=0.001,
+                    training_epochs=100,
+                    batch_size=100,
+                    display_step=1,
+                    n_hidden_1=10000,
+                    n_hidden_2=10000,
+                    n_classes=99,
+                    keep_prob=0.9,
+                    train_times=1)
+        ir.train(params)
+    if evaluate:
+        ir.load_processed_data('data_no_id_100.pkl')
+        test = ir.data[:, :-99]
+        label = ir.data[:, -99:]
+        print test.shape
+        print label.shape
+        e = Evaluator(n_input=10000, n_classes=99, test=test, test_labels=label)
+        e.evaluate_model('cnn')
+
+
+

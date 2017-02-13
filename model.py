@@ -29,6 +29,10 @@ def inputs(n_input, n_classes):
     with tf.name_scope('input'):
         x = tf.placeholder(tf.float32, [None, n_input], name='x-input')
         y_ = tf.placeholder(tf.float32, [None, n_classes], name='y-input')
+
+        # Add these to be retreived when importing meta data
+        tf.add_to_collection(tf.GraphKeys.GLOBAL_VARIABLES, x)
+        tf.add_to_collection(tf.GraphKeys.GLOBAL_VARIABLES, y_)
     return x, y_
 
 def maxpool2d(x, k=2):
@@ -90,7 +94,9 @@ def nn_layer(input_tensor, input_dim, output_dim, layer_name, conv2d=False, act=
         return activations
 
 def keep_probability():
-    return tf.placeholder(tf.float32)
+    keep_prob = tf.placeholder(tf.float32, name="keep_probability")
+    tf.add_to_collection(tf.GraphKeys.GLOBAL_VARIABLES, keep_prob)
+    return keep_prob
 
 def dropout(tensor, keep_prob):
     with tf.name_scope('dropout'):

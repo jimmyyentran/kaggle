@@ -65,11 +65,11 @@ class Trainer():
         train_writer = tf.summary.FileWriter('output/train_' + curr_time, sess.graph)
         test_writer = tf.summary.FileWriter('output/test_' + curr_time)
 
-        # initialize the variables
-        tf.global_variables_initializer().run()
-
         # Saver
         saver = tf.train.Saver()
+
+        # initialize the variables
+        tf.global_variables_initializer().run()
 
         # Train the model, and also write summaries.
         # Every ith step, measure test-set accuracy, and write test summaries

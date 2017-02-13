@@ -1,5 +1,7 @@
 import model
 import tensorflow as tf
+from IPython import embed
+import numpy as np
 
 class Evaluator():
     def __init__(self, **kwargs):
@@ -9,20 +11,31 @@ class Evaluator():
         self.test_labels = kwargs['test_labels']
 
     def evaluate_model(self, mdl):
-        if mdl.lower() == 'cnn':
-            model_function = model.cnn
+        #  if mdl.lower() == 'cnn':
+            #  model_function = model.cnn
 
-        sess = tf.InteractiveSession()
+        saver = tf.train.import_meta_graph('model/model_02-12-2017_16:45:33-999/model_02-12-2017_16:45:33-999.meta')
 
-        # Model tensors
-        x, y_, keep_prob, y, input_transform = model_function(self.n_input, self.n_classes)
+        sess = tf.Session()
 
-        cross_entropy = model.loss(y, y_)
+        #  with tf.device('/cpu:0'):
+            #  x, y_, keep_prob, y, input_transform = model_function(self.n_input, self.n_classes)
 
-        train_step = model.train(cross_entropy, self.learning_rate)
+            #  cross_entropy = model.loss(y, y_)
 
-        correct_prediction, accuracy = model.measure_accuracy(y, y_)
+            #  train_step = model.train(cross_entropy, 0.001)
 
+            #  correct_prediction, accuracy = model.measure_accuracy(y, y_)
+
+        #  tf.global_variables_initializer().run()
+
+        saver.restore(sess, 'model/model_02-12-2017_16:45:33-999/model_02-12-2017_16:45:33-999')
+
+        #  output = sess.run(accuracy,
+                #  feed_dict={x:np.reshape(self.test,[-1,100,100,1]),y_:self.test_labels,keep_prob:1.0})
+        output = sess.run('accuracy:0',
+                feed_dict={'x-input:0':np.reshape(self.test,[-1,100,100,1]),'y-input:0':self.test_labels,'dropout_keep_probability:0':1.0})
+        print output
         # # Summary handler
         # merged = tf.summary.merge_all()
         # curr_time = str(strftime("%m-%d-%Y_%H:%M:%S", gmtime()))

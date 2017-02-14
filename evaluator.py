@@ -1,94 +1,166 @@
-import model
+import pickle
+
+import numpy as np
+import os
+import pandas as pd
 import tensorflow as tf
 from IPython import embed
-import numpy as np
+import matplotlib.pyplot as plt
+import sklearn.metrics
+import itertools
+import seaborn as sns
 
-class Evaluator():
-    def __init__(self, **kwargs):
-        self.n_input = kwargs['n_input']
-        self.n_classes = kwargs['n_classes']
-        self.test = kwargs['test']
-        self.test_labels = kwargs['test_labels']
+from leaf_classification import ImageRecognition
 
-    def evaluate_model(self, mdl):
-        #  if mdl.lower() == 'cnn':
-            #  model_function = model.cnn
 
-        saver = tf.train.import_meta_graph('model/model_02-12-2017_16:45:33-999/model_02-12-2017_16:45:33-999.meta')
+def load_session(mdl_loc):
+    meta = mdl_loc + ".meta"
+    saver = tf.train.import_meta_graph(meta)
 
-        sess = tf.Session()
+    sess = tf.Session()
+    saver.restore(sess, mdl_loc)
+    return sess
 
-        #  with tf.device('/cpu:0'):
-            #  x, y_, keep_prob, y, input_transform = model_function(self.n_input, self.n_classes)
 
-            #  cross_entropy = model.loss(y, y_)
+def get_tensor(session, tensor_name):
+    tensor = session.graph.get_tensor_by_name(tensor_name)
+    return tensor
 
-            #  train_step = model.train(cross_entropy, 0.001)
 
-            #  correct_prediction, accuracy = model.measure_accuracy(y, y_)
+def predict(sess, tensor, x_input):
+    output = sess.run(tensor,
+                      feed_dict={'input/keep_probability:0': 1.0,
+                                 'input_1/x-input:0': x_input})
+    return output
 
-        #  tf.global_variables_initializer().run()
 
-        saver.restore(sess, 'model/model_02-12-2017_16:45:33-999/model_02-12-2017_16:45:33-999')
+def save_prediction(array, dir, name):
+    if not os.path.exists(dir):
+        os.mkdir(dir)
+    with open(dir + name, 'wb') as output:
+        pickle.dump(array, output, -1)
 
-        #  output = sess.run(accuracy,
-                #  feed_dict={x:np.reshape(self.test,[-1,100,100,1]),y_:self.test_labels,keep_prob:1.0})
-        output = sess.run('accuracy:0',
-                feed_dict={'x-input:0':np.reshape(self.test,[-1,100,100,1]),'y-input:0':self.test_labels,'dropout_keep_probability:0':1.0})
-        print output
-        # # Summary handler
-        # merged = tf.summary.merge_all()
-        # curr_time = str(strftime("%m-%d-%Y_%H:%M:%S", gmtime()))
-        # train_writer = tf.summary.FileWriter('output/train_' + curr_time, sess.graph)
-        # test_writer = tf.summary.FileWriter('output/test_' + curr_time)
 
-        # initialize the variables
-        # tf.global_variables_initializer().run()
+def load_predictions(pred_loc):
+    with open(pred_loc, 'rb') as input:
+        data = pickle.load(input)
+    return data
 
-        # Train the model, and also write summaries.
-        # Every ith step, measure test-set accuracy, and write test summaries
-        # All other steps, run train_step on training data, & add training summaries
-        def feed_dict(train):
-            """Make a TensorFlow feed_dict: maps data onto Tensor placeholders."""
-            # if train or FLAGS.fake_data:
-            if train:
-                xs, ys = self.next_batch(self.batch_size)
-                k = self.keep_prob
-            else:
-                # xs, ys = mnist.test.images, mnist.test.labels
-                xs, ys = self.test, self.test_labels
-                k = 1.0
 
-            if mdl.lower() == 'cnn':
-                xs = input_transform(xs)
+def compare_with_true(prediction, labels):
+    best_guess_index = np.argmax(prediction, 1)
+    actual_index = np.argmax(labels, 1)
+    correct_predictions = np.equal(best_guess_index, actual_index)
+    correct_percentage = np.mean(correct_predictions)
+    return best_guess_index, actual_index, correct_predictions, correct_percentage
 
-            return {x: xs, y_: ys, keep_prob: k}
 
-        # for i in range(self.training_epochs):
-        #     if i % 10 == 0:  # Record summaries and test-set accuracy
-        #         summary, acc = sess.run([merged, accuracy], feed_dict=feed_dict(False))
-        #         test_writer.add_summary(summary, i)
-        #         print('Test accuracy at step %s: %s' % (i, acc))
-        #     else:  # Record train set summaries, and train
-        #         if i % 100 == 99:  # Record execution stats
-        #             run_options = tf.RunOptions(trace_level=tf.RunOptions.FULL_TRACE)
-        #             run_metadata = tf.RunMetadata()
-        #             summary, _ = sess.run([merged, train_step],
-        #                                   feed_dict=feed_dict(True),
-        #                                   options=run_options,
-        #                                   run_metadata=run_metadata)
-        #             train_writer.add_run_metadata(run_metadata, 'step%03d' % i)
-        #             train_writer.add_summary(summary, i)
-        #             saver.save(sess, 'output/model_' + curr_time, global_step=i)
-        #             print('Adding run metadata for', i)
-        #         else:  # Record a summary
-        #             summary, _ = sess.run([merged, train_step], feed_dict=feed_dict(True))
-        #             train_writer.add_summary(summary, i)
-        # train_writer.close()
-        # test_writer.close()
+def correct_count(correct_predictions, actual_labels, one_hot_names):
+    correct_indices = actual_labels[correct_predictions]
+    incorrect_indices = actual_labels[-correct_predictions]
 
-        # reset for next batch
-        tf.reset_default_graph()
+    num_occurrences_correct = np.bincount(correct_indices)
+    num_occurrences_incorrect = np.bincount(incorrect_indices)
 
-        # close and restore memory
-        sess.close()
+    counts = pd.DataFrame(index=one_hot_names, data={'correct': num_occurrences_correct,
+                                                     'incorrect': num_occurrences_incorrect,
+                                                     'total':num_occurrences_correct +
+                                                             num_occurrences_incorrect})
+    counts['percent'] = counts['correct'] / counts['total']
+
+    return counts
+
+def plot_confusion_matrix(cm, classes,
+                          normalize=False,
+                          title='Confusion matrix',
+                          cmap=plt.cm.Accent):
+    """
+    This function prints and plots the confusion matrix.
+    Normalization can be applied by setting `normalize=True`.
+    """
+    # plt.imshow(cm, interpolation='nearest', cmap=cmap)
+    sns.set(context="paper", rc={"font.size":5})
+    plt.figure(figsize=(24,10))
+    ax = sns.heatmap(cm, linewidths=0.1)
+    plt.title(title)
+    # plt.colorbar()
+    tick_marks = np.arange(len(classes))
+    plt.yticks(tick_marks, classes, rotation=0)
+    plt.xticks(tick_marks, classes, rotation=90)
+
+    if normalize:
+        cm = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
+        print("Normalized confusion matrix")
+    else:
+        print('Confusion matrix, without normalization')
+
+    # thresh = cm.max() / 2.
+    # for i, j in itertools.product(range(cm.shape[0]), range(cm.shape[1])):
+    #     if cm[i,j] != 0:
+    #         plt.text(j, i, cm[i, j],
+    #                  horizontalalignment="center",
+    #                  color="white" if cm[i, j] > thresh else "black")
+
+    plt.tight_layout()
+    plt.ylabel('True label')
+    plt.xlabel('Predicted label')
+    plt.show()
+
+def best_worse(df):
+    col_name = 'correct'
+    col_total_name = 'total'
+
+    df[col_name]
+    embed()
+
+
+def load_session_and_save_prediction(**kwargs):
+    test = kwargs['test']
+    model_location = kwargs['model_location']
+    tensor_name = kwargs['tensor_name']
+    save_dir = kwargs['save_dir']
+    save_name = kwargs['save_name']
+
+    sess = load_session(model_location)
+    y_ = get_tensor(sess, tensor_name)
+    prediction = predict(sess, y_, test)
+    save_prediction(prediction, save_dir, save_name)
+
+
+def evaluate(**kwargs):
+    test_labels = kwargs['test_labels']
+    identifier = kwargs['id']
+    one_hot_names = kwargs['one_hot_names']
+    save_dir = kwargs['save_dir']
+    save_name = kwargs['save_name']
+
+    pred = load_predictions(save_dir + save_name)
+    best_guess_index, actual_index, correct_predictions, correct_percentage = compare_with_true(
+        pred, test_labels)
+    print correct_percentage
+
+    # count = correct_count(correct_predictions, actual_index, one_hot_names)
+    # cm = confusion_matrix(actual_index, best_guess_index)
+    # plot_confusion_matrix(cm, one_hot_names)
+
+    embed()
+
+
+
+if __name__ == "__main__":
+    ir = ImageRecognition()
+    ir.load_processed_data('data_no_id_100.pkl')
+    test = ir.data[:, :-99]
+    label = ir.data[:, -99:]
+    metadata = dict(
+        test=test,
+        test_labels=label,
+        id=ir.identifier,
+        one_hot_names=ir.one_hot_names,
+        model_location="output/model_02-13-2017_05:24:36-99",
+        tensor_name="output/activation:0",
+        save_dir="predictions/",
+        save_name="model_02-13-2017_05:24:36-99.pkl")
+
+    # load_session_and_save_prediction(**metadata)
+    evaluate(**metadata)

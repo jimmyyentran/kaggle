@@ -31,8 +31,8 @@ def inputs(n_input, n_classes):
         y_ = tf.placeholder(tf.float32, [None, n_classes], name='y-input')
 
         # Add these to be retreived when importing meta data
-        tf.add_to_collection(tf.GraphKeys.GLOBAL_VARIABLES, x)
-        tf.add_to_collection(tf.GraphKeys.GLOBAL_VARIABLES, y_)
+        # tf.add_to_collection(tf.GraphKeys.GLOBAL_VARIABLES, x)
+        # tf.add_to_collection(tf.GraphKeys.GLOBAL_VARIABLES, y_)
     return x, y_
 
 def maxpool2d(x, k=2):
@@ -94,8 +94,9 @@ def nn_layer(input_tensor, input_dim, output_dim, layer_name, conv2d=False, act=
         return activations
 
 def keep_probability():
-    keep_prob = tf.placeholder(tf.float32, name="keep_probability")
-    tf.add_to_collection(tf.GraphKeys.GLOBAL_VARIABLES, keep_prob)
+    with tf.name_scope('input'):
+        keep_prob = tf.placeholder(tf.float32, name="keep_probability")
+    # tf.add_to_collection(tf.GraphKeys.GLOBAL_VARIABLES, keep_prob)
     return keep_prob
 
 def dropout(tensor, keep_prob):
@@ -132,6 +133,7 @@ def train(cross_entropy, learning_rate):
     return train_step
 
 def measure_accuracy(logits, labels):
+    # Accuracy is placed under tf.GraphKey.SUMMARIES due to summary.scalar(), not accuracy
     with tf.name_scope('accuracy'):
         with tf.name_scope('correct_prediction'):
             correct_prediction = tf.equal(tf.argmax(logits, 1), tf.argmax(labels, 1))

@@ -121,6 +121,8 @@ def load_session_and_save_prediction(**kwargs):
     save_dir = kwargs['save_dir']
     save_name = kwargs['save_name']
 
+    embed()
+
     sess = load_session(model_location)
     y_ = get_tensor(sess, tensor_name)
     prediction = predict(sess, y_, test)
@@ -162,5 +164,5 @@ if __name__ == "__main__":
         save_dir="predictions/",
         save_name="model_02-13-2017_05:24:36-99.pkl")
 
-    # load_session_and_save_prediction(**metadata)
-    evaluate(**metadata)
+    load_session_and_save_prediction(**metadata)
+    # evaluate(**metadata)

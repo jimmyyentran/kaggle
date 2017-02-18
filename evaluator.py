@@ -188,8 +188,9 @@ def evaluate(**kwargs):
     print correct_percentage
 
     # count = correct_count(correct_predictions, actual_index, one_hot_names)
-    # cm = confusion_matrix(actual_index, best_guess_index)
+    # cm = sklearn.metrics.confusion_matrix(actual_index, best_guess_index)
     # plot_confusion_matrix(cm, one_hot_names)
+    print sklearn.metrics.classification_report(actual_index, best_guess_index)
 
     embed()
 

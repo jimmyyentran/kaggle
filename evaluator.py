@@ -1,16 +1,16 @@
 import pickle
 
+import matplotlib.pyplot as plt
 import numpy as np
 import os
 import pandas as pd
+import seaborn as sns
+import sklearn.metrics
 import tensorflow as tf
 from IPython import embed
-import matplotlib.pyplot as plt
-import sklearn.metrics
-import itertools
-import seaborn as sns
 
 from leaf_classification import ImageRecognition
+import model
 
 
 def load_session(mdl_loc):
@@ -64,11 +64,12 @@ def correct_count(correct_predictions, actual_labels, one_hot_names):
 
     counts = pd.DataFrame(index=one_hot_names, data={'correct': num_occurrences_correct,
                                                      'incorrect': num_occurrences_incorrect,
-                                                     'total':num_occurrences_correct +
-                                                             num_occurrences_incorrect})
+                                                     'total': num_occurrences_correct +
+                                                              num_occurrences_incorrect})
     counts['percent'] = counts['correct'] / counts['total']
 
     return counts
+
 
 def plot_confusion_matrix(cm, classes,
                           normalize=False,
@@ -79,8 +80,8 @@ def plot_confusion_matrix(cm, classes,
     Normalization can be applied by setting `normalize=True`.
     """
     # plt.imshow(cm, interpolation='nearest', cmap=cmap)
-    sns.set(context="paper", rc={"font.size":5})
-    plt.figure(figsize=(24,10))
+    sns.set(context="paper", rc={"font.size": 5})
+    plt.figure(figsize=(24, 10))
     ax = sns.heatmap(cm, linewidths=0.1)
     plt.title(title)
     # plt.colorbar()
@@ -106,6 +107,7 @@ def plot_confusion_matrix(cm, classes,
     plt.xlabel('Predicted label')
     plt.show()
 
+
 def best_worse(df):
     col_name = 'correct'
     col_total_name = 'total'
@@ -114,14 +116,58 @@ def best_worse(df):
     embed()
 
 
+def minimize_input(sess, loss_tensor, learning_rate, label, n_input, input=None):
+    if input is None:
+        # grey
+        input = np.random.random((1, n_input)) * 20 + 128
+    x = sess.graph.get_tensor_by_name("input_1/x-input:0")
+    var_grad = tf.gradients(loss_tensor, [x])
+    for i in range(100):
+        var_grad_val, loss_info = sess.run([var_grad, loss_tensor],
+                                           feed_dict={"input_1/x-input:0": input,
+                                                      "input_1/y-input:0": np.reshape(label,
+                                                                                      (1, 99)),
+                                                      "input/keep_probability:0": 1.0})
+        print "Loss: %s" % loss_info
+        input -= var_grad_val[0] * learning_rate
+        if np.max(input) > 255 or np.min(input) < 0:
+            print "@@@@@@@@@@@@@@@@@@@@@@@@@@RESCALE@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@"
+            b = sklearn.preprocessing.minmax_scale(input[0], feature_range=(0, 255))
+            input = np.reshape(b, (1, 10000))
+        print "Gradient max: %s, min: %s" % (np.max(var_grad_val), np.min(var_grad_val))
+        print "Gradient index max: %s, min: %s" % (np.argmax(var_grad_val), np.argmin(var_grad_val))
+        print "Input max: %s, min: %s" % (np.max(input), np.min(input))
+        print "Input index max:%s, min: %s" % (np.argmax(input), np.argmin(input))
+        print
+
+    plt.imshow(np.reshape(input, (100, 100)), cmap='gray')
+    plt.show()
+
+    return input
+
+
+def visualize(**kwargs):
+    model_location = kwargs['model_location']
+    test_labels = kwargs['test_labels']
+    one_hot_names = kwargs['one_hot_names']
+    tensor_name = kwargs['tensor_name']
+    input_y_tensor_name = kwargs['input_y_tensor_name']
+    learning_rate = kwargs['learning_rate']
+    n_input = kwargs['n_input']
+
+    sess = load_session(model_location)
+    y_ = get_tensor(sess, tensor_name)
+    y = get_tensor(sess, input_y_tensor_name)
+    rmse = model.rmse_loss(y_, y)
+    minimize_input(sess, rmse, learning_rate, test_labels[0], n_input)
+
+
 def load_session_and_save_prediction(**kwargs):
     test = kwargs['test']
     model_location = kwargs['model_location']
     tensor_name = kwargs['tensor_name']
     save_dir = kwargs['save_dir']
     save_name = kwargs['save_name']
-
-    embed()
 
     sess = load_session(model_location)
     y_ = get_tensor(sess, tensor_name)
@@ -148,7 +194,6 @@ def evaluate(**kwargs):
     embed()
 
 
-
 if __name__ == "__main__":
     ir = ImageRecognition()
     ir.load_processed_data('data_no_id_100.pkl')
@@ -159,10 +204,15 @@ if __name__ == "__main__":
         test_labels=label,
         id=ir.identifier,
         one_hot_names=ir.one_hot_names,
+        n_input=ir.n_input,
         model_location="output/model_02-13-2017_05:24:36-99",
         tensor_name="output/activation:0",
+        input_x_tensor_name="input_1/x-input:0",
+        input_y_tensor_name="input_1/y-input:0",
         save_dir="predictions/",
-        save_name="model_02-13-2017_05:24:36-99.pkl")
+        save_name="model_02-13-2017_05:24:36-99.pkl",
+        learning_rate=0.01)
 
-    load_session_and_save_prediction(**metadata)
+    # load_session_and_save_prediction(**metadata)
     # evaluate(**metadata)
+    visualize(**metadata)

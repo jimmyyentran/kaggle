@@ -1,6 +1,8 @@
-import tensorflow as tf
 import math
+
 import numpy as np
+import tensorflow as tf
+
 
 # We can't initialize these variables to 0 - the network will get stuck.
 def weight_variable(shape):
@@ -8,10 +10,12 @@ def weight_variable(shape):
     initial = tf.truncated_normal(shape, stddev=0.1)
     return tf.Variable(initial)
 
+
 def bias_variable(shape):
     """Create a bias variable with appropriate initialization."""
     initial = tf.constant(0.1, shape=shape)
     return tf.Variable(initial)
+
 
 def variable_summaries(var):
     """Attach a lot of summaries to a Tensor (for TensorBoard visualization)."""
@@ -25,6 +29,7 @@ def variable_summaries(var):
         tf.summary.scalar('min', tf.reduce_min(var))
         #  tf.summary.histogram('histogram', var)
 
+
 def inputs(n_input, n_classes):
     with tf.name_scope('input'):
         x = tf.placeholder(tf.float32, [None, n_input], name='x-input')
@@ -35,14 +40,17 @@ def inputs(n_input, n_classes):
         # tf.add_to_collection(tf.GraphKeys.GLOBAL_VARIABLES, y_)
     return x, y_
 
+
 def maxpool2d(x, k=2):
     # MaxPool2D wrapper
     return tf.nn.max_pool(x, ksize=[1, k, k, 1], strides=[1, k, k, 1], padding='SAME')
+
 
 def image_summary(tensor, side):
     with tf.name_scope('input_reshape'):
         image_shaped_input = tf.reshape(tensor, [-1, side, side, 1])
         tf.summary.image('input', image_shaped_input, 10)
+
 
 # def plotNNFilter(units):
 #     filters = units.shape[3]
@@ -93,11 +101,13 @@ def nn_layer(input_tensor, input_dim, output_dim, layer_name, conv2d=False, act=
         #  tf.summary.histogram('activations', activations)
         return activations
 
+
 def keep_probability():
     with tf.name_scope('input'):
         keep_prob = tf.placeholder(tf.float32, name="keep_probability")
     # tf.add_to_collection(tf.GraphKeys.GLOBAL_VARIABLES, keep_prob)
     return keep_prob
+
 
 def dropout(tensor, keep_prob):
     with tf.name_scope('dropout'):
@@ -106,6 +116,7 @@ def dropout(tensor, keep_prob):
         # dropped = tf.nn.dropout(hidden3, keep_prob)
         # dropped = tf.nn.dropout(fc1, keep_prob)
     return tf.nn.dropout(tensor, keep_prob)
+
 
 def loss(logits, labels):
     with tf.name_scope('cross_entropy'):
@@ -126,11 +137,17 @@ def loss(logits, labels):
     tf.summary.scalar('cross_entropy', cross_entropy)
     return cross_entropy
 
+
+def rmse_loss(logits, labels):
+    return tf.sqrt(tf.reduce_mean(tf.square(tf.sub(labels, logits))))
+
+
 def train(cross_entropy, learning_rate):
     with tf.name_scope('train'):
         train_step = tf.train.AdamOptimizer(learning_rate).minimize(
             cross_entropy)
     return train_step
+
 
 def measure_accuracy(logits, labels):
     # Accuracy is placed under tf.GraphKey.SUMMARIES due to summary.scalar(), not accuracy
@@ -141,6 +158,7 @@ def measure_accuracy(logits, labels):
             accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
     tf.summary.scalar('accuracy', accuracy)
     return correct_prediction, accuracy
+
 
 def cnn(n_input, n_classes):
     side = int(math.sqrt(n_input))

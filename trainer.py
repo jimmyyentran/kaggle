@@ -1,6 +1,5 @@
 import math
 import numpy as np
-from time import strftime, gmtime
 import tensorflow as tf
 
 import model
@@ -26,6 +25,8 @@ class Trainer():
         self.train_labels = kwargs['train_labels']
         self.test = kwargs['test']
         self.test_labels = kwargs['test_labels']
+
+        self.name = kwargs['name']
 
         self.current_step = 0
         self.train_len = self.train.shape[0]
@@ -61,9 +62,8 @@ class Trainer():
 
         # Summary handler
         merged = tf.summary.merge_all()
-        curr_time = str(strftime("%m-%d-%Y_%H:%M:%S", gmtime()))
-        train_writer = tf.summary.FileWriter('output/train_' + curr_time, sess.graph)
-        test_writer = tf.summary.FileWriter('output/test_' + curr_time)
+        train_writer = tf.summary.FileWriter('output/train_' + self.name, sess.graph)
+        test_writer = tf.summary.FileWriter('output/test_' + self.name)
 
         # Saver
         saver = tf.train.Saver()
@@ -105,7 +105,8 @@ class Trainer():
                                           run_metadata=run_metadata)
                     train_writer.add_run_metadata(run_metadata, 'step%03d' % i)
                     train_writer.add_summary(summary, i)
-                    saver.save(sess, 'output/model_' + curr_time, global_step=i)
+                    if i % 999:
+                        saver.save(sess, 'model/model_' + self.name, global_step=i)
                     print('Adding run metadata for', i)
                 else:  # Record a summary
                     summary, _ = sess.run([merged, train_step], feed_dict=feed_dict(True))

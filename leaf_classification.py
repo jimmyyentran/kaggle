@@ -8,6 +8,7 @@ import tensorflow as tf
 from IPython import embed
 from scipy import misc
 from sklearn.model_selection import KFold
+from time import strftime, gmtime
 from trainer import Trainer
 
 class ImageRecognition:
@@ -16,6 +17,7 @@ class ImageRecognition:
         self.current_step = 0
         self.train_index = []
         self.test_index = []
+        self.names = []
         pass
 
     def process_images(self, single_side, num_images, image_dir, save=False):
@@ -93,13 +95,23 @@ class ImageRecognition:
                   " Test: {}".format(test.shape) + \
                   " Test labels: {}".format(test_labels.shape)
 
+            curr_time = str(strftime("%m-%d-%Y_%H:%M:%S", gmtime()))
+            self.names.append(curr_time)
             params.update(dict(train=train,
                                train_labels=train_labels,
                                test=test,
                                test_labels=test_labels,
-                               n_input=self.n_input))
+                               n_input=self.n_input,
+                               name=curr_time))
 
             Trainer(**params).generate_model('cnn')
+
+    def save_run_metadata():
+        with open('metadata_' + self.names[0] + '.pkl', 'wb') as output:
+            pickle.dump(self.names, output, -1)
+            pickle.dump(self.train_index, output, -1)
+            pickle.dump(self.test_index, output, -1)
+
 
 if __name__ == "__main__":
     ir = ImageRecognition()
@@ -110,7 +122,7 @@ if __name__ == "__main__":
     ir.load_processed_data('data_no_id_100.pkl')
     ir.cv(10)
     params = dict(learning_rate=0.001,
-                training_epochs=100,
+                training_epochs=1000,
                 batch_size=100,
                 display_step=1,
                 n_hidden_1=10000,
@@ -119,3 +131,4 @@ if __name__ == "__main__":
                 keep_prob=0.9,
                 train_times=1)
     ir.train(params)
+    ir.save_run_metadata()

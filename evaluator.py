@@ -12,12 +12,18 @@ from IPython import embed
 from leaf_classification import ImageRecognition
 import model
 
+CPU=True
 
 def load_session(mdl_loc):
     meta = mdl_loc + ".meta"
     saver = tf.train.import_meta_graph(meta)
-
-    sess = tf.Session()
+    if CPU:
+        config = tf.ConfigProto(
+                device_count = {'GPU': 0}
+                )
+        sess = tf.Session(config=config)
+    else:
+        sess = tf.Session()
     saver.restore(sess, mdl_loc)
     return sess
 
@@ -192,8 +198,6 @@ def evaluate(**kwargs):
     # plot_confusion_matrix(cm, one_hot_names)
     print sklearn.metrics.classification_report(actual_index, best_guess_index)
 
-    embed()
-
 
 if __name__ == "__main__":
     ir = ImageRecognition()
@@ -206,14 +210,14 @@ if __name__ == "__main__":
         id=ir.identifier,
         one_hot_names=ir.one_hot_names,
         n_input=ir.n_input,
-        model_location="output/model_02-13-2017_05:24:36-99",
+        model_location="model/model_02-19-2017_23:14:37-999",
         tensor_name="output/activation:0",
         input_x_tensor_name="input_1/x-input:0",
         input_y_tensor_name="input_1/y-input:0",
         save_dir="predictions/",
-        save_name="model_02-13-2017_05:24:36-99.pkl",
+        save_name="model_02-19-2017_23:14:37-999.pkl",
         learning_rate=0.01)
 
-    # load_session_and_save_prediction(**metadata)
-    # evaluate(**metadata)
-    visualize(**metadata)
+    #  load_session_and_save_prediction(**metadata)
+    evaluate(**metadata)
+    #  visualize(**metadata)

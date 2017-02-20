@@ -3,7 +3,6 @@ import math
 import numpy as np
 import tensorflow as tf
 
-
 # We can't initialize these variables to 0 - the network will get stuck.
 def weight_variable(shape):
     """Create a weight variable with appropriate initialization."""
@@ -51,21 +50,6 @@ def image_summary(tensor, side):
         image_shaped_input = tf.reshape(tensor, [-1, side, side, 1])
         tf.summary.image('input', image_shaped_input, 10)
 
-
-# def plotNNFilter(units):
-#     filters = units.shape[3]
-#     plt.figure(1, figsize=(20, 20))
-#     n_columns = 6
-#     n_rows = math.ceil(filters / n_columns) + 1
-#     for i in range(filters):
-#         plt.subplot(n_rows, n_columns, i + 1)
-#         plt.title('Filter ' + str(i))
-#         plt.imshow(units[0, :, :, i], interpolation="nearest", cmap="gray")
-#
-# def getActivations(layer, stimuli):
-#     units = sess.run(layer, feed_dict={x: np.reshape(stimuli, [1, 784], order='F'),
-#                                        keep_prob: 1.0})
-#     plotNNFilter(units)
 
 def nn_layer(input_tensor, input_dim, output_dim, layer_name, conv2d=False, act=tf.nn.relu):
     """Reusable code for making a simple neural net layer.
@@ -183,6 +167,31 @@ def mlp(n_input, n_classes):
 
     return x, y_, keep_prob, y, None
 
+def mlp2(n_input, n_classes):
+    meta = "model/model_02-20-2017_02:10:32-999" + ".meta"
+    saver = tf.train.import_meta_graph(meta)
+    #  config = tf.ConfigProto(
+            #  device_count = {'GPU': 0}
+            #  )
+    sess = tf.Session()
+    saver.restore(sess, "model/model_02-20-2017_02:10:32-999")
+
+    tensor = sess.graph.get_tensor_by_name("output/activation:0")
+
+    hidden1 = 5000
+    hidden2 = 5000
+    keep_prob = keep_probability()
+    x, y_ = inputs(n_input, n_classes)
+
+    layer1 = nn_layer(x, n_input, hidden1, 'layer1')
+    layer1_drop = dropout(layer1, keep_prob)
+    layer2 = nn_layer(layer1_drop, hidden1, hidden2, 'layer2')
+    layer2_drop = dropout(layer2, keep_prob)
+    y = nn_layer(layer2_drop, hidden2, n_classes, 'output', act=tf.identity)
+    y = tf.concat([y, tensor], 1)
+
+    return x, y_, keep_prob, y, None
+
 def cnn(n_input, n_classes):
     side = int(math.sqrt(n_input))
 
@@ -206,8 +215,49 @@ def cnn(n_input, n_classes):
     fc1 = tf.reshape(conv2, [-1, 25 * 25 * 64])
     fc1 = nn_layer(fc1, 25 * 25 * 64, 1024, 'fc_layer1')
 
-    # Do not apply softmax activation yet, see loss()
+    #  Do not apply softmax activation yet, see loss()
     dropped = dropout(fc1, keep_prob)
     y = nn_layer(dropped, 1024, n_classes, 'output', act=tf.identity)
 
     return x, y_, keep_prob, y, input_transform
+
+def cnn2(n_input, n_classes):
+    additional_input = 192
+    side = int(math.sqrt(n_input))
+
+    def input_transform(x):
+        if type(x) is tf.Tensor:
+            return tf.reshape(x, shape=[-1, side, side, 1])
+        else:
+            return np.reshape(x, [-1, side, side, 1])
+
+    keep_prob = keep_probability()
+    x, y_ = inputs(n_input, n_classes)
+
+    x = input_transform(x)
+
+    conv1 = nn_layer(x, 1, 32, 'layer1', conv2d=True)
+    conv1 = maxpool2d(conv1, k=2)
+
+    conv2 = nn_layer(conv1, 32, 64, 'layer2', conv2d=True)
+    conv2 = maxpool2d(conv2, k=2)
+
+    fc1 = tf.reshape(conv2, [-1, 25 * 25 * 64])
+    fc1 = nn_layer(fc1, 25 * 25 * 64, 1024, 'fc_layer1')
+    dropped = dropout(fc1, keep_prob)
+
+    #  il1 = nn_layer(dropped, 1024, n_classes, 'integration_layer1')
+    x2 = tf.placeholder(tf.float32, [None, additional_input], name='x-input2')
+    #  il1 = tf.concat(1, [il1, x2])
+    il1 = tf.concat(1, [dropped, x2])
+
+    il2 = nn_layer(il1, 1024 + additional_input, 5000, 'integration_layer2')
+    #  il2 = nn_layer(il1, n_classes + additional_input, 5000, 'integration_layer2')
+    dropped2 = dropout(il2, keep_prob)
+
+    il3 = nn_layer(dropped2, 5000, 5000, 'integration_layer3')
+    dropped3 = dropout(il3, keep_prob)
+
+    y = nn_layer(dropped3, 5000, n_classes, 'output', act=tf.identity)
+
+    return x, y_, keep_prob, y, input_transform, x2

@@ -45,7 +45,8 @@ class ImageRecognition:
                 pickle.dump(self.n_input, output, -1)
 
 
-    def process_images(self, single_side, num_images, image_dir, save=False):
+    def process_images(self, single_side, num_images, image_dir, save=False,
+            csv=False, texture_only=False):
         # input parameters
         self.n_input = single_side * single_side
 
@@ -67,17 +68,27 @@ class ImageRecognition:
         labels = labels.as_matrix()  # convert dataframe to matrix
         print "Labels one-hot", labels.shape
 
-        # additional = train_csv.drop(['id', 'species'], axis=1).as_matrix() * 255
+        if csv:
+            if texture_only:
+                additional = train_csv.filter(regex=("texture*"))
+            else:
+                additional = train_csv.drop(['id', 'species'], axis=2).as_matrix()
+            self.data = np.hstack((train, additional, labels))  # combine matrix column-wise
+            self.n_input += additional.shape[1]
+        else:
+            self.data = np.column_stack((train, labels))
 
-        # train_and_label = np.hstack((train, additional, labels))  # combine matrix column-wise
-
-        # self.data = np.column_stack((train_and_label, train_csv['id']))
-        self.data = np.column_stack((train, labels))
         self.identifier = train_csv['id']
 
         if (save):
-            # with open('data_additional_' + str(single_side) + '.pkl', 'wb') as output:
-            with open('data_no_id_' + str(single_side) + '.pkl', 'wb') as output:
+            data_dir = "data_image_" + str(single_side)
+            if csv:
+                data_dir += "_csv"
+            if texture_only:
+                data_dir += "_texture_only"
+            data_dir += ".pkl"
+
+            with open( data_dir, 'wb') as output:
                 pickle.dump(self.data, output, -1)
                 pickle.dump(self.identifier, output, -1)
                 pickle.dump(self.one_hot_names, output, -1)
@@ -133,8 +144,8 @@ class ImageRecognition:
                                n_input=self.n_input,
                                name=name))
 
-            #  Trainer(**params).generate_model('cnn')
-            Trainer(**params).generate_model(model)
+            #  Trainer(**params).generate_model(model)
+            Trainer(**params).generate_model2(model)
 
     def save_run_metadata(self):
         with open('metadata_' + self.names[0] + '.pkl', 'wb') as output:
@@ -145,23 +156,28 @@ class ImageRecognition:
 
 if __name__ == "__main__":
     ir = ImageRecognition()
-    ir.process_csv(save=True)
-    # ir.process_images(100, 1584, 'images/processed_100/', True)
+    #  ir.process_csv(save=True)
+    #  ir.process_images(100, 1584, 'images/processed_100/', True, True, True)
     # ir.process_images(350, 1584, 'images/processed_350/', True)
+
     # ir.load_processed_data('data_100.pkl')
     # ir.load_processed_data('data_additional_100.pkl')
     #  ir.load_processed_data('data_no_id_100.pkl')
     #  ir.load_processed_data('data_csv_only.pkl')
-    #  ir.cv(10)
-    #  params = dict(learning_rate=0.001,
-                #  training_epochs=1000,
-                #  batch_size=100,
-                #  display_step=1,
-                #  n_hidden_1=10000,
-                #  n_hidden_2=10000,
-                #  n_classes=99,
-                #  keep_prob=0.9,
-                #  train_times=1,
-                #  model="mlp")
-    #  ir.train(params)
-    #  ir.save_run_metadata()
+    #  ir.load_processed_data('data_image_100_csv_texture_only.pkl')
+    ir.load_processed_data('data_image_100_csv.pkl')
+
+    ir.cv(10)
+    params = dict(learning_rate=0.001,
+                training_epochs=1000,
+                batch_size=100,
+                display_step=1,
+                n_hidden_1=10000,
+                n_hidden_2=10000,
+                n_classes=99,
+                keep_prob=0.9,
+                train_times=1,
+                model="cnn",
+                integrated=True)
+    ir.train(params)
+    ir.save_run_metadata()

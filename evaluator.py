@@ -52,6 +52,12 @@ def load_predictions(pred_loc):
         data = pickle.load(input)
     return data
 
+def load_metadata(meta_loc):
+    with open(meta_loc, 'rb') as input:
+        names = pickle.load(input)
+        train_index = pickle.load(input)
+        test_index = pickle.load(input)
+    return names, train_index, test_index
 
 def compare_with_true(prediction, labels):
     best_guess_index = np.argmax(prediction, 1)
@@ -202,6 +208,7 @@ def evaluate(**kwargs):
 if __name__ == "__main__":
     ir = ImageRecognition()
     ir.load_processed_data('data_no_id_100.pkl')
+    load_metadata('metadata_02-20-2017_02:10:32.pkl')
     test = ir.data[:, :-99]
     label = ir.data[:, -99:]
     metadata = dict(
@@ -210,14 +217,14 @@ if __name__ == "__main__":
         id=ir.identifier,
         one_hot_names=ir.one_hot_names,
         n_input=ir.n_input,
-        model_location="model/model_02-19-2017_23:14:37-999",
+        model_location="model/model_02-20-2017_02:10:32-999",
         tensor_name="output/activation:0",
         input_x_tensor_name="input_1/x-input:0",
         input_y_tensor_name="input_1/y-input:0",
         save_dir="predictions/",
-        save_name="model_02-19-2017_23:14:37-999.pkl",
+        save_name="model_02-20-2017_02:10:32-999.pkl",
         learning_rate=0.01)
 
-    #  load_session_and_save_prediction(**metadata)
-    evaluate(**metadata)
+    load_session_and_save_prediction(**metadata)
+    #  evaluate(**metadata)
     #  visualize(**metadata)

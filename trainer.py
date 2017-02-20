@@ -48,6 +48,8 @@ class Trainer():
     def generate_model(self, mdl):
         if mdl.lower() == 'cnn':
             model_function = model.cnn
+        elif mdl.lower() == 'mlp':
+            model_function = model.mlp
 
         sess = tf.InteractiveSession()
 
@@ -56,6 +58,8 @@ class Trainer():
 
         cross_entropy = model.loss(y, y_)
 
+        #  learning_rate = model.tf_learning_rate(0.001)
+        #  train_step = model.train(cross_entropy, learning_rate)
         train_step = model.train(cross_entropy, self.learning_rate)
 
         correct_prediction, accuracy = model.measure_accuracy(y, y_)
@@ -105,7 +109,7 @@ class Trainer():
                                           run_metadata=run_metadata)
                     train_writer.add_run_metadata(run_metadata, 'step%03d' % i)
                     train_writer.add_summary(summary, i)
-                    if i % 999:
+                    if i % 1000 == 999:
                         saver.save(sess, 'model/model_' + self.name, global_step=i)
                     print('Adding run metadata for', i)
                 else:  # Record a summary

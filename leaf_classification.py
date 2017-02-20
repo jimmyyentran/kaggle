@@ -20,6 +20,31 @@ class ImageRecognition:
         self.names = []
         pass
 
+    def process_csv(self, save=False):
+        train_csv = pd.read_csv('train.csv')
+
+        labels = pd.get_dummies(train_csv['species'])  # one-hot encoding
+        self.one_hot_names = labels.columns
+        labels = labels.as_matrix()
+
+        train_data = train_csv.drop(['id', 'species'], axis=1).as_matrix()
+        self.n_input = train_data.shape[1]
+
+        #  with open('predictions/model_02-20-2017_02:10:32-999.pkl', 'rb') as cnn:
+            #  data_cnn = pickle.load(cnn)
+
+        #  embed()
+        self.data = np.column_stack((train_data, labels))
+        self.identifier = train_csv['id']
+
+        if (save):
+            with open('data_csv_only.pkl', 'wb') as output:
+                pickle.dump(self.data, output, -1)
+                pickle.dump(self.identifier, output, -1)
+                pickle.dump(self.one_hot_names, output, -1)
+                pickle.dump(self.n_input, output, -1)
+
+
     def process_images(self, single_side, num_images, image_dir, save=False):
         # input parameters
         self.n_input = single_side * single_side
@@ -95,18 +120,23 @@ class ImageRecognition:
                   " Test: {}".format(test.shape) + \
                   " Test labels: {}".format(test_labels.shape)
 
+            model = params['model']
+
             curr_time = str(strftime("%m-%d-%Y_%H:%M:%S", gmtime()))
-            self.names.append(curr_time)
+            name = model+'_'+curr_time
+
+            self.names.append(name)
             params.update(dict(train=train,
                                train_labels=train_labels,
                                test=test,
                                test_labels=test_labels,
                                n_input=self.n_input,
-                               name=curr_time))
+                               name=name))
 
-            Trainer(**params).generate_model('cnn')
+            #  Trainer(**params).generate_model('cnn')
+            Trainer(**params).generate_model(model)
 
-    def save_run_metadata():
+    def save_run_metadata(self):
         with open('metadata_' + self.names[0] + '.pkl', 'wb') as output:
             pickle.dump(self.names, output, -1)
             pickle.dump(self.train_index, output, -1)
@@ -115,20 +145,23 @@ class ImageRecognition:
 
 if __name__ == "__main__":
     ir = ImageRecognition()
+    ir.process_csv(save=True)
     # ir.process_images(100, 1584, 'images/processed_100/', True)
     # ir.process_images(350, 1584, 'images/processed_350/', True)
     # ir.load_processed_data('data_100.pkl')
     # ir.load_processed_data('data_additional_100.pkl')
-    ir.load_processed_data('data_no_id_100.pkl')
-    ir.cv(10)
-    params = dict(learning_rate=0.001,
-                training_epochs=1000,
-                batch_size=100,
-                display_step=1,
-                n_hidden_1=10000,
-                n_hidden_2=10000,
-                n_classes=99,
-                keep_prob=0.9,
-                train_times=1)
-    ir.train(params)
-    ir.save_run_metadata()
+    #  ir.load_processed_data('data_no_id_100.pkl')
+    #  ir.load_processed_data('data_csv_only.pkl')
+    #  ir.cv(10)
+    #  params = dict(learning_rate=0.001,
+                #  training_epochs=1000,
+                #  batch_size=100,
+                #  display_step=1,
+                #  n_hidden_1=10000,
+                #  n_hidden_2=10000,
+                #  n_classes=99,
+                #  keep_prob=0.9,
+                #  train_times=1,
+                #  model="mlp")
+    #  ir.train(params)
+    #  ir.save_run_metadata()

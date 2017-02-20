@@ -148,6 +148,16 @@ def train(cross_entropy, learning_rate):
             cross_entropy)
     return train_step
 
+def tf_learning_rate(starter_learning_rate):
+    decay_step = 100
+    decay_rate = 0.96
+    staircase=True
+    global_step = tf.Variable(0, trainable=False)
+    learning_rate = tf.train.exponential_decay(starter_learning_rate,
+            global_step, decay_step, decay_rate, staircase=staircase)
+    tf.summary.scalar('learning_rate', learning_rate)
+    return learning_rate
+
 
 def measure_accuracy(logits, labels):
     # Accuracy is placed under tf.GraphKey.SUMMARIES due to summary.scalar(), not accuracy
@@ -159,6 +169,19 @@ def measure_accuracy(logits, labels):
     tf.summary.scalar('accuracy', accuracy)
     return correct_prediction, accuracy
 
+def mlp(n_input, n_classes):
+    hidden1 = 5000
+    hidden2 = 5000
+    keep_prob = keep_probability()
+    x, y_ = inputs(n_input, n_classes)
+
+    layer1 = nn_layer(x, n_input, hidden1, 'layer1')
+    layer1_drop = dropout(layer1, keep_prob)
+    layer2 = nn_layer(layer1_drop, hidden1, hidden2, 'layer2')
+    layer2_drop = dropout(layer2, keep_prob)
+    y = nn_layer(layer2_drop, hidden2, n_classes, 'output', act=tf.identity)
+
+    return x, y_, keep_prob, y, None
 
 def cnn(n_input, n_classes):
     side = int(math.sqrt(n_input))

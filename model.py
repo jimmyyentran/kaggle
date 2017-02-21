@@ -138,8 +138,8 @@ def train(cross_entropy, learning_rate, global_step):
     return train_step
 
 def tf_learning_rate(starter_learning_rate, global_step):
-    decay_step = 10
-    decay_rate = 0.96
+    decay_step = 100
+    decay_rate = 0.90
     staircase=True
     learning_rate = tf.train.exponential_decay(starter_learning_rate,
             global_step, decay_step, decay_rate, staircase=staircase)
@@ -158,8 +158,8 @@ def measure_accuracy(logits, labels):
     return correct_prediction, accuracy
 
 def mlp(n_input, n_classes):
-    hidden1 = 5000
-    hidden2 = 5000
+    hidden1 = 1000
+    hidden2 = 1000
     keep_prob = keep_probability()
     x, y_ = inputs(n_input, n_classes)
 
@@ -253,14 +253,14 @@ def cnn2(n_input, n_classes, rotate=False):
     fc1 = nn_layer(fc1, 25 * 25 * 64, 1024, 'fc_layer1')
     dropped = dropout(fc1, keep_prob)
 
-    #  il1 = nn_layer(dropped, 1024, n_classes, 'integration_layer1')
+    il1 = nn_layer(dropped, 1024, n_classes, 'integration_layer1')
     x2 = tf.placeholder(tf.float32, [None, additional_input], name='x-input2')
-    #  il1 = tf.concat(1, [il1, x2])
+    il1 = tf.concat([il1, x2], 1)
     #  il1 = tf.concat(1, [dropped, x2])
-    il1 = tf.concat([dropped, x2], 1) # tf1.0
+    #  il1 = tf.concat([dropped, x2], 1) # tf1.0
 
-    il2 = nn_layer(il1, 1024 + additional_input, 5000, 'integration_layer2')
-    #  il2 = nn_layer(il1, n_classes + additional_input, 5000, 'integration_layer2')
+    #  il2 = nn_layer(il1, 1024 + additional_input, 5000, 'integration_layer2')
+    il2 = nn_layer(il1, n_classes + additional_input, 5000, 'integration_layer2')
     dropped2 = dropout(il2, keep_prob)
 
     il3 = nn_layer(dropped2, 5000, 5000, 'integration_layer3')

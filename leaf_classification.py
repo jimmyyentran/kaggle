@@ -144,8 +144,8 @@ class ImageRecognition:
                                n_input=self.n_input,
                                name=name))
 
-            #  Trainer(**params).generate_model(model)
-            Trainer(**params).generate_model2(model)
+            Trainer(**params).generate_model(model)
+            #  Trainer(**params).generate_model2(model)
 
     def save_run_metadata(self):
         with open('metadata_' + self.names[0] + '.pkl', 'wb') as output:
@@ -163,13 +163,13 @@ if __name__ == "__main__":
     # ir.load_processed_data('data_100.pkl')
     # ir.load_processed_data('data_additional_100.pkl')
     #  ir.load_processed_data('data_no_id_100.pkl')
-    #  ir.load_processed_data('data_csv_only.pkl')
+    ir.load_processed_data('data_csv_only.pkl')
     #  ir.load_processed_data('data_image_100_csv_texture_only.pkl')
-    ir.load_processed_data('data_image_100_csv.pkl')
+    #  ir.load_processed_data('data_image_100_csv.pkl')
 
     ir.cv(10)
     params = dict(learning_rate=0.001,
-                training_epochs=100,
+                training_epochs=1000,
                 batch_size=100,
                 display_step=1,
                 n_hidden_1=10000,
@@ -177,8 +177,10 @@ if __name__ == "__main__":
                 n_classes=99,
                 keep_prob=0.9,
                 train_times=1,
-                model="cnn_mlp",
+                #  model="cnn_mlp",
+                model='mlp',
                 integrated=True,
+                #  rotate=False)
                 rotate=True)
     ir.train(params)
     ir.save_run_metadata()

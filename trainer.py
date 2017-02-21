@@ -57,13 +57,18 @@ class Trainer():
         sess = tf.InteractiveSession()
 
         # Model tensors
-        x, y_, keep_prob, y, input_transform = model_function(self.n_input, self.n_classes)
+        #  x, y_, keep_prob, y, input_transform = model_function(self.n_input, self.n_classes)
+        x, y_, keep_prob, y, input_transform, _ = model_function(self.n_input, self.n_classes)
 
         cross_entropy = model.loss(y, y_)
 
         #  learning_rate = model.tf_learning_rate(0.001)
         #  train_step = model.train(cross_entropy, learning_rate)
-        train_step = model.train(cross_entropy, self.learning_rate)
+        #  train_step = model.train(cross_entropy, self.learning_rate)
+
+        global_step = model.global_step_variable()
+        learning_rate = model.tf_learning_rate(self.learning_rate, global_step)
+        train_step = model.train(cross_entropy, learning_rate, global_step)
 
         correct_prediction, accuracy = model.measure_accuracy(y, y_)
 
@@ -144,7 +149,7 @@ class Trainer():
         cross_entropy = model.loss(y, y_)
 
         global_step = model.global_step_variable()
-        learning_rate = model.tf_learning_rate(0.001, global_step)
+        learning_rate = model.tf_learning_rate(self.learning_rate, global_step)
         train_step = model.train(cross_entropy, learning_rate, global_step)
         #  train_step = model.train(cross_entropy, self.learning_rate)
 

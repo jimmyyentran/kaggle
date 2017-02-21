@@ -2,6 +2,7 @@ import math
 
 import numpy as np
 import tensorflow as tf
+import random
 
 # We can't initialize these variables to 0 - the network will get stuck.
 def weight_variable(shape):
@@ -14,6 +15,10 @@ def bias_variable(shape):
     """Create a bias variable with appropriate initialization."""
     initial = tf.constant(0.1, shape=shape)
     return tf.Variable(initial)
+
+
+def global_step_variable():
+    return tf.Variable(0, name='global_step', trainable=False)
 
 
 def variable_summaries(var):
@@ -126,17 +131,16 @@ def rmse_loss(logits, labels):
     return tf.sqrt(tf.reduce_mean(tf.square(tf.sub(labels, logits))))
 
 
-def train(cross_entropy, learning_rate):
+def train(cross_entropy, learning_rate, global_step):
     with tf.name_scope('train'):
         train_step = tf.train.AdamOptimizer(learning_rate).minimize(
-            cross_entropy)
+            cross_entropy, global_step=global_step)
     return train_step
 
-def tf_learning_rate(starter_learning_rate):
-    decay_step = 100
+def tf_learning_rate(starter_learning_rate, global_step):
+    decay_step = 10
     decay_rate = 0.96
     staircase=True
-    global_step = tf.Variable(0, trainable=False)
     learning_rate = tf.train.exponential_decay(starter_learning_rate,
             global_step, decay_step, decay_rate, staircase=staircase)
     tf.summary.scalar('learning_rate', learning_rate)
@@ -165,7 +169,7 @@ def mlp(n_input, n_classes):
     layer2_drop = dropout(layer2, keep_prob)
     y = nn_layer(layer2_drop, hidden2, n_classes, 'output', act=tf.identity)
 
-    return x, y_, keep_prob, y, None
+    return x, y_, keep_prob, y, None, None
 
 def mlp2(n_input, n_classes):
     meta = "model/model_02-20-2017_02:10:32-999" + ".meta"
@@ -219,15 +223,18 @@ def cnn(n_input, n_classes):
     dropped = dropout(fc1, keep_prob)
     y = nn_layer(dropped, 1024, n_classes, 'output', act=tf.identity)
 
-    return x, y_, keep_prob, y, input_transform
+    return x, y_, keep_prob, y, input_transform, None
 
-def cnn2(n_input, n_classes):
+def cnn2(n_input, n_classes, rotate=False):
     additional_input = 192
     side = int(math.sqrt(n_input))
 
     def input_transform(x):
         if type(x) is tf.Tensor:
-            return tf.reshape(x, shape=[-1, side, side, 1])
+            transform = tf.reshape(x, shape=[-1, side, side, 1])
+            if rotate:
+                transform = tf.contrib.image.rotate(transform, random.uniform(0,6.28))
+            return transform
         else:
             return np.reshape(x, [-1, side, side, 1])
 
@@ -249,7 +256,8 @@ def cnn2(n_input, n_classes):
     #  il1 = nn_layer(dropped, 1024, n_classes, 'integration_layer1')
     x2 = tf.placeholder(tf.float32, [None, additional_input], name='x-input2')
     #  il1 = tf.concat(1, [il1, x2])
-    il1 = tf.concat(1, [dropped, x2])
+    #  il1 = tf.concat(1, [dropped, x2])
+    il1 = tf.concat([dropped, x2], 1) # tf1.0
 
     il2 = nn_layer(il1, 1024 + additional_input, 5000, 'integration_layer2')
     #  il2 = nn_layer(il1, n_classes + additional_input, 5000, 'integration_layer2')

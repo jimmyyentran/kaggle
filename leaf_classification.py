@@ -169,7 +169,7 @@ if __name__ == "__main__":
 
     ir.cv(10)
     params = dict(learning_rate=0.001,
-                training_epochs=1000,
+                training_epochs=100,
                 batch_size=100,
                 display_step=1,
                 n_hidden_1=10000,
@@ -177,7 +177,8 @@ if __name__ == "__main__":
                 n_classes=99,
                 keep_prob=0.9,
                 train_times=1,
-                model="cnn",
-                integrated=True)
+                model="cnn_mlp",
+                integrated=True,
+                rotate=True)
     ir.train(params)
     ir.save_run_metadata()

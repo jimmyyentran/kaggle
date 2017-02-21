@@ -1,6 +1,7 @@
 import math
 import numpy as np
 import tensorflow as tf
+import random
 
 import model
 
@@ -26,6 +27,7 @@ class Trainer():
         self.test = kwargs['test']
         self.test_labels = kwargs['test_labels']
         self.integrated = kwargs['integrated']
+        self.rotate = kwargs['rotate']
 
         self.name = kwargs['name']
 
@@ -127,20 +129,24 @@ class Trainer():
 
     def generate_model2(self, mdl):
         if mdl.lower() == 'cnn':
-            model_function = model.cnn2
+            model_function = model.cnn
         elif mdl.lower() == 'mlp':
             model_function = model.mlp
+        elif mdl.lower() == 'cnn_mlp':
+            model_function = model.cnn2
 
         sess = tf.InteractiveSession()
 
         # Model tensors
-        x, y_, keep_prob, y, input_transform, x2 = model_function(10000, self.n_classes)
+        x, y_, keep_prob, y, input_transform, x2 = model_function(10000,
+                self.n_classes, rotate=self.rotate)
 
         cross_entropy = model.loss(y, y_)
 
-        #  learning_rate = model.tf_learning_rate(0.001)
-        #  train_step = model.train(cross_entropy, learning_rate)
-        train_step = model.train(cross_entropy, self.learning_rate)
+        global_step = model.global_step_variable()
+        learning_rate = model.tf_learning_rate(0.001, global_step)
+        train_step = model.train(cross_entropy, learning_rate, global_step)
+        #  train_step = model.train(cross_entropy, self.learning_rate)
 
         correct_prediction, accuracy = model.measure_accuracy(y, y_)
 
@@ -172,7 +178,7 @@ class Trainer():
             xs2 = xs[:, 10000:]
             xs = xs[:, :10000]
 
-            if mdl.lower() == 'cnn':
+            if mdl.lower() == 'cnn' or mdl.lower() == 'cnn_mlp':
                 xs = input_transform(xs)
 
             return {x: xs, y_: ys, keep_prob: k, x2:xs2}

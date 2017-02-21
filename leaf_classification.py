@@ -148,7 +148,7 @@ class ImageRecognition:
             #  Trainer(**params).generate_model2(model)
 
     def save_run_metadata(self):
-        with open('metadata_' + self.names[0] + '.pkl', 'wb') as output:
+        with open('metadata/metadata_' + self.names[0] + '.pkl', 'wb') as output:
             pickle.dump(self.names, output, -1)
             pickle.dump(self.train_index, output, -1)
             pickle.dump(self.test_index, output, -1)

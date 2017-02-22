@@ -288,9 +288,11 @@ def cnn2(n_input, n_classes, rotate=False):
 
     fc1 = tf.reshape(conv2, [-1, 25 * 25 * 64])
     fc1 = nn_layer(fc1, 25 * 25 * 64, 1024, 'fc_layer1')
-    dropped = dropout(fc1, keep_prob)
+    #  dropped = dropout(fc1, keep_prob)
 
-    il1 = nn_layer(dropped, 1024, n_classes, 'integration_layer1')
+    #  il1 = nn_layer(dropped, 1024, n_classes, 'integration_layer1')
+    il1 = nn_layer(fc1, 1024, n_classes, 'integration_layer1')
+    il1 = tf.nn.l2_normalize(il1,1)
     x2 = tf.placeholder(tf.float32, [None, additional_input], name='x-input2')
     il1 = tf.concat([il1, x2], 1)
     #  il1 = tf.concat(1, [dropped, x2])

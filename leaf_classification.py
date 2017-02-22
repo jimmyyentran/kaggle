@@ -203,11 +203,11 @@ if __name__ == "__main__":
                 n_classes=99,
                 keep_prob=0.95,
                 train_times=1,
-                #  model="cnn_mlp",
+                model="cnn_mlp",
                 #  model='mlp',
                 #  model="cnn",
                 #  model="cnn256",
-                model = "cnn_pred_mlp",
+                #  model = "cnn_pred_mlp",
                 integrated=True,
                 debug=False,
                 #  rotate=False)
@@ -221,6 +221,8 @@ if __name__ == "__main__":
         ir.load_processed_data(data_dir + 'data_image_256.pkl')
     elif params['model'].lower() == 'cnn_pred_mlp':
         ir.load_processed_data(data_dir + 'data_csv_only.pkl')
+    elif params['model'].lower() == 'cnn_mlp':
+        ir.load_processed_data(data_dir + 'data_image_100_csv.pkl')
     else:
         ir.load_processed_data(data_dir + 'data_csv_only.pkl')
 

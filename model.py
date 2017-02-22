@@ -158,8 +158,8 @@ def measure_accuracy(logits, labels):
     return correct_prediction, accuracy
 
 def mlp(n_input, n_classes):
-    hidden1 = 1000
-    hidden2 = 1000
+    hidden1 = 3000
+    hidden2 = 3000
     keep_prob = keep_probability()
     x, y_ = inputs(n_input, n_classes)
 
@@ -172,13 +172,15 @@ def mlp(n_input, n_classes):
     return x, y_, keep_prob, y, None, None
 
 def mlp2(n_input, n_classes):
-    meta = "model/model_02-20-2017_02:10:32-999" + ".meta"
+    weight_dir = 'weight/'
+    weight = weight_dir + 'cnn_02-21-2017_21:24:28-10'
+    meta = weight + ".meta"
     saver = tf.train.import_meta_graph(meta)
     #  config = tf.ConfigProto(
             #  device_count = {'GPU': 0}
             #  )
     sess = tf.Session()
-    saver.restore(sess, "model/model_02-20-2017_02:10:32-999")
+    saver.restore(sess, weight)
 
     tensor = sess.graph.get_tensor_by_name("output/activation:0")
 

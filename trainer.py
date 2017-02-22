@@ -4,6 +4,7 @@ import tensorflow as tf
 import random
 
 import model
+from tensorflow.python import debug as tf_debug
 
 
 class Trainer():
@@ -30,6 +31,7 @@ class Trainer():
         self.rotate = kwargs['rotate']
 
         self.name = kwargs['name']
+        self.debug = kwargs['debug']
 
         self.current_step = 0
         self.train_len = self.train.shape[0]
@@ -53,8 +55,14 @@ class Trainer():
             model_function = model.cnn
         elif mdl.lower() == 'mlp':
             model_function = model.mlp
+        elif mdl.lower() == 'cnn_pred_mlp':
+            model_function = model.mlp
 
         sess = tf.InteractiveSession()
+
+        if self.debug:
+            sess = tf_debug.LocalCLIDebugWrapperSession(sess)
+            sess.add_tensor_filter("has_inf_or_nan", tf_debug.has_inf_or_nan)
 
         # Model tensors
         #  x, y_, keep_prob, y, input_transform = model_function(self.n_input, self.n_classes)
@@ -106,7 +114,10 @@ class Trainer():
             if i % 10 == 0:  # Record summaries and test-set accuracy
                 summary, acc = sess.run([merged, accuracy], feed_dict=feed_dict(False))
                 test_writer.add_summary(summary, i)
+                saver.save(sess, 'weight/' + self.name, global_step=i)
                 print('Test accuracy at step %s: %s' % (i, acc))
+            #  if (i+1) % 50 == 0:
+                #  saver.save(sess, 'weight/' + self.name, global_step=i)
             else:  # Record train set summaries, and train
                 if i % 100 == 99:  # Record execution stats
                     run_options = tf.RunOptions(trace_level=tf.RunOptions.FULL_TRACE)
@@ -117,8 +128,8 @@ class Trainer():
                                           run_metadata=run_metadata)
                     train_writer.add_run_metadata(run_metadata, 'step%03d' % i)
                     train_writer.add_summary(summary, i)
-                    if i % 1000 == 999:
-                        saver.save(sess, 'model/model_' + self.name, global_step=i)
+                    if i % 1000 == 499:
+                        saver.save(sess, 'weight/' + self.name, global_step=i)
                     print('Adding run metadata for', i)
                 else:  # Record a summary
                     summary, _ = sess.run([merged, train_step], feed_dict=feed_dict(True))
@@ -132,12 +143,8 @@ class Trainer():
         # close and restore memory
         sess.close()
 
-    def generate_model2(self, mdl):
-        if mdl.lower() == 'cnn':
-            model_function = model.cnn
-        elif mdl.lower() == 'mlp':
-            model_function = model.mlp
-        elif mdl.lower() == 'cnn_mlp':
+    def generate_combined_model(self, mdl):
+        if mdl.lower() == 'cnn_mlp':
             model_function = model.cnn2
 
         sess = tf.InteractiveSession()
@@ -204,7 +211,7 @@ class Trainer():
                     train_writer.add_run_metadata(run_metadata, 'step%03d' % i)
                     train_writer.add_summary(summary, i)
                     if i % 1000 == 999:
-                        saver.save(sess, 'model/model_' + self.name, global_step=i)
+                        saver.save(sess, 'weight/' + self.name, global_step=i)
                     print('Adding run metadata for', i)
                 else:  # Record a summary
                     summary, _ = sess.run([merged, train_step], feed_dict=feed_dict(True))

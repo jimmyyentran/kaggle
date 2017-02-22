@@ -117,6 +117,8 @@ class ImageRecognition:
             min = len(self.train_index)
 
         for i in range(min):
+            model = params['model']
+
             cv_train_data = self.data[self.train_index[i]]
             cv_test_data = self.data[self.test_index[i]]
 
@@ -125,13 +127,19 @@ class ImageRecognition:
             test = cv_test_data[:, :self.n_input]
             test_labels = cv_test_data[:, self.n_input:]
 
+            if model.lower() == "cnn_pred_mlp":
+                with open("predictions/labels.pkl", 'rb') as input:
+                    cnn_pred = pickle.load(input)
+                train = np.column_stack((train, cnn_pred[self.train_index[i]]))
+                test = np.column_stack((test, cnn_pred[self.test_index[i]]))
+                self.n_input += cnn_pred.shape[1]
+
             print "Set %s)" % (i + 1) + \
                   " Train: {}".format(train.shape) + \
                   " Train Labels: {}".format(train_labels.shape) + \
                   " Test: {}".format(test.shape) + \
                   " Test labels: {}".format(test_labels.shape)
 
-            model = params['model']
 
             curr_time = str(strftime("%m-%d-%Y_%H:%M:%S", gmtime()))
             name = model+'_'+curr_time
@@ -144,32 +152,33 @@ class ImageRecognition:
                                n_input=self.n_input,
                                name=name))
 
-            Trainer(**params).generate_model(model)
-            #  Trainer(**params).generate_model2(model)
+            if model.lower() == "cnn_mlp":
+                Trainer(**params).generate_combined_model(model)
+            else:
+                Trainer(**params).generate_model(model)
 
     def save_run_metadata(self):
-        with open('metadata/metadata_' + self.names[0] + '.pkl', 'wb') as output:
+        with open('metadata/' + self.names[0] + '.pkl', 'wb') as output:
             pickle.dump(self.names, output, -1)
             pickle.dump(self.train_index, output, -1)
             pickle.dump(self.test_index, output, -1)
 
 
 if __name__ == "__main__":
-    ir = ImageRecognition()
     #  ir.process_csv(save=True)
     #  ir.process_images(100, 1584, 'images/processed_100/', True, True, True)
     # ir.process_images(350, 1584, 'images/processed_350/', True)
 
     # ir.load_processed_data('data_100.pkl')
     # ir.load_processed_data('data_additional_100.pkl')
-    #  ir.load_processed_data('data_no_id_100.pkl')
-    ir.load_processed_data('data_csv_only.pkl')
+    #  ir.load_processed_data('data_csv_only.pkl')
     #  ir.load_processed_data('data_image_100_csv_texture_only.pkl')
     #  ir.load_processed_data('data_image_100_csv.pkl')
 
-    ir.cv(10)
+    ir = ImageRecognition()
+
     params = dict(learning_rate=0.001,
-                training_epochs=1000,
+                training_epochs=501,
                 batch_size=100,
                 display_step=1,
                 n_hidden_1=10000,
@@ -178,9 +187,23 @@ if __name__ == "__main__":
                 keep_prob=0.9,
                 train_times=1,
                 #  model="cnn_mlp",
-                model='mlp',
+                #  model='mlp',
+                #  model="cnn",
+                model = "cnn_pred_mlp",
                 integrated=True,
+                debug=False,
                 #  rotate=False)
                 rotate=True)
+
+    data_dir = "data/"
+
+    if params['model'].lower() == 'cnn':
+        ir.load_processed_data(data_dir + 'data_image_100.pkl')
+    elif params['model'].lower() == 'cnn_pred_mlp':
+        ir.load_processed_data(data_dir + 'data_csv_only.pkl')
+    else:
+        ir.load_processed_data(data_dir + 'data_csv_only.pkl')
+
+    ir.cv(10)
     ir.train(params)
     ir.save_run_metadata()

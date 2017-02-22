@@ -176,25 +176,25 @@ def visualize(**kwargs):
 
 def load_session_and_save_prediction(**kwargs):
     test = kwargs['test']
-    model_location = kwargs['model_location']
+    weight_dir= kwargs['weight_dir']
     tensor_name = kwargs['tensor_name']
-    save_dir = kwargs['save_dir']
-    save_name = kwargs['save_name']
+    prediction_dir = kwargs['prediction_dir']
+    model_name = kwargs['model_name']
 
-    sess = load_session(model_location)
+    sess = load_session(weight_dir + model_name)
     y_ = get_tensor(sess, tensor_name)
     prediction = predict(sess, y_, test)
-    save_prediction(prediction, save_dir, save_name)
+    save_prediction(prediction, prediction_dir, model_name)
 
 
 def evaluate(**kwargs):
     test_labels = kwargs['test_labels']
     identifier = kwargs['id']
     one_hot_names = kwargs['one_hot_names']
-    save_dir = kwargs['save_dir']
-    save_name = kwargs['save_name']
+    prediction_dir = kwargs['prediction_dir']
+    model_name = kwargs['model_name']
 
-    pred = load_predictions(save_dir + save_name)
+    pred = load_predictions(prediction_dir + model_name)
     best_guess_index, actual_index, correct_predictions, correct_percentage = compare_with_true(
         pred, test_labels)
     print correct_percentage
@@ -207,8 +207,8 @@ def evaluate(**kwargs):
 
 if __name__ == "__main__":
     ir = ImageRecognition()
-    ir.load_processed_data('data_no_id_100.pkl')
-    load_metadata('metadata_02-20-2017_02:10:32.pkl')
+    ir.load_processed_data('data/data_image_100.pkl')
+    #  load_metadata('metadata_02-20-2017_02:10:32.pkl')
     test = ir.data[:, :-99]
     label = ir.data[:, -99:]
     metadata = dict(
@@ -217,14 +217,16 @@ if __name__ == "__main__":
         id=ir.identifier,
         one_hot_names=ir.one_hot_names,
         n_input=ir.n_input,
-        model_location="model/model_02-20-2017_02:10:32-999",
+        #  model_name="cnn_02-21-2017_21:24:28-10",
+        model_name='test.pkl',
+        weight_dir="weight/",
+        prediction_dir="predictions/",
         tensor_name="output/activation:0",
         input_x_tensor_name="input_1/x-input:0",
         input_y_tensor_name="input_1/y-input:0",
-        save_dir="predictions/",
-        save_name="model_02-20-2017_02:10:32-999.pkl",
-        learning_rate=0.01)
+        learning_rate=0.01,
+        debug=True)
 
-    load_session_and_save_prediction(**metadata)
-    #  evaluate(**metadata)
+    #  load_session_and_save_prediction(**metadata)
+    evaluate(**metadata)
     #  visualize(**metadata)

@@ -2,6 +2,7 @@
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/imgproc/imgproc.hpp"
 #include "iostream"
+#include <string>
 using namespace cv;
 using namespace std;
 
@@ -29,14 +30,14 @@ cv::Mat resizeKeepAspectRatio(const cv::Mat &input, const cv::Size &dstSize, con
 
 
 int main(){
-    String DIRECTORY = "images/processed_manual/";
+    String DIRECTORY = "../images/processed_manual/";
     String EXTENSION = "jpg";
-    String PROCESSED = "images/processed_100/"; //Where to save
-    double SIDE_LENGTH = 100;
+    String PROCESSED = "../images/processed_256/"; //Where to save, need to make this dir first
+    double SIDE_LENGTH = 256;
     Scalar BLACK = Scalar(0,0,0);
     int IMAGE_COUNT = 1584;
     for (int i = 1; i <= IMAGE_COUNT; ++i) {
-        String filename = to_string(i) + "." + EXTENSION;
+		String filename = to_string(i) + "." + EXTENSION;
         String relative_filename = DIRECTORY + filename;
         cout << relative_filename << endl;
         Mat src = imread(relative_filename, CV_LOAD_IMAGE_COLOR);

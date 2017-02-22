@@ -227,6 +227,41 @@ def cnn(n_input, n_classes):
 
     return x, y_, keep_prob, y, input_transform, None
 
+
+def cnn256(n_input, n_classes):
+    side = int(math.sqrt(n_input))
+
+    def input_transform(x):
+        if type(x) is tf.Tensor:
+            return tf.reshape(x, shape=[-1, side, side, 1])
+        else:
+            return np.reshape(x, [-1, side, side, 1])
+
+    keep_prob = keep_probability()
+    x, y_ = inputs(n_input, n_classes)
+
+    x = input_transform(x)
+
+    filter1 = 13
+    filter2 = 25
+    red = 64
+    out = 1024
+
+    conv1 = nn_layer(x, 1, filter1, 'layer1', conv2d=True)
+    conv1 = maxpool2d(conv1, k=2)
+
+    conv2 = nn_layer(conv1, filter1, filter2, 'layer2', conv2d=True)
+    conv2 = maxpool2d(conv2, k=2)
+
+    fc1 = tf.reshape(conv2, [-1, red * red * filter2])
+    fc1 = nn_layer(fc1, red * red * filter2, out, 'fc_layer1')
+
+    #  Do not apply softmax activation yet, see loss()
+    dropped = dropout(fc1, keep_prob)
+    y = nn_layer(dropped, out, n_classes, 'output', act=tf.identity)
+
+    return x, y_, keep_prob, y, input_transform, None
+
 def cnn2(n_input, n_classes, rotate=False):
     additional_input = 192
     side = int(math.sqrt(n_input))

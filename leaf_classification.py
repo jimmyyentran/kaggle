@@ -10,6 +10,8 @@ from scipy import misc
 from sklearn.model_selection import KFold
 from time import strftime, gmtime
 from trainer import Trainer
+from IPython import embed
+import sklearn
 
 class ImageRecognition:
     def __init__(self):
@@ -56,7 +58,7 @@ class ImageRecognition:
             train_im[i - 1] = im.ravel()  # Shift index due to numpy's zero-indexing
         print "All 1D images: ", train_im.shape
 
-        train_csv = pd.read_csv('train.csv')
+        train_csv = pd.read_csv('csv/train.csv')
         print "Train csv", train_csv.shape  # training has the "species" column
 
         train_idx = train_csv['id'] - 1  # subtract 1 to take care of zero-indexing
@@ -111,9 +113,12 @@ class ImageRecognition:
             self.test_index.append(test)
 
     def train(self, params):
-        if len(self.train_index) > params['train_times']:
-            min = params['train_times']
-        else:
+        try:
+            if len(self.train_index) > params['train_times']:
+                min = params['train_times']
+            else:
+                min = len(self.train_index)
+        except KeyError:
             min = len(self.train_index)
 
         for i in range(min):
@@ -128,8 +133,19 @@ class ImageRecognition:
             test_labels = cv_test_data[:, self.n_input:]
 
             if model.lower() == "cnn_pred_mlp":
-                with open("predictions/labels.pkl", 'rb') as input:
+                with open("predictions/cnn_02-22-2017_08:46:07-299", 'rb') as input:
+                #  with open("predictions/labels", 'rb') as input:
                     cnn_pred = pickle.load(input)
+
+                cnn_pred = sklearn.preprocessing.normalize(cnn_pred, axis=1) #normalize
+                top_3_idx = np.argpartition(cnn_pred, -3, axis=1)[:,-3:]
+                keeper = np.zeros(cnn_pred.shape)
+                for j in range(cnn_pred.shape[0]):
+                    zeros = np.zeros(cnn_pred.shape[1])
+                    zeros[top_3_idx[j]] = 1
+                    keeper[j] = cnn_pred[j] * zeros
+                cnn_pred = keeper
+                print cnn_pred[0]
                 train = np.column_stack((train, cnn_pred[self.train_index[i]]))
                 test = np.column_stack((test, cnn_pred[self.test_index[i]]))
                 self.n_input += cnn_pred.shape[1]
@@ -168,6 +184,7 @@ if __name__ == "__main__":
     #  ir.process_csv(save=True)
     #  ir.process_images(100, 1584, 'images/processed_100/', True, True, True)
     # ir.process_images(350, 1584, 'images/processed_350/', True)
+    #  ir.process_images(256, 1584, 'images/processed_256/', True)
 
     # ir.load_processed_data('data_100.pkl')
     # ir.load_processed_data('data_additional_100.pkl')
@@ -178,17 +195,18 @@ if __name__ == "__main__":
     ir = ImageRecognition()
 
     params = dict(learning_rate=0.001,
-                training_epochs=501,
+                training_epochs=301,
                 batch_size=100,
                 display_step=1,
                 n_hidden_1=10000,
                 n_hidden_2=10000,
                 n_classes=99,
-                keep_prob=0.9,
+                keep_prob=0.95,
                 train_times=1,
                 #  model="cnn_mlp",
                 #  model='mlp',
                 #  model="cnn",
+                #  model="cnn256",
                 model = "cnn_pred_mlp",
                 integrated=True,
                 debug=False,
@@ -199,11 +217,13 @@ if __name__ == "__main__":
 
     if params['model'].lower() == 'cnn':
         ir.load_processed_data(data_dir + 'data_image_100.pkl')
+    elif params['model'].lower() == 'cnn256':
+        ir.load_processed_data(data_dir + 'data_image_256.pkl')
     elif params['model'].lower() == 'cnn_pred_mlp':
         ir.load_processed_data(data_dir + 'data_csv_only.pkl')
     else:
         ir.load_processed_data(data_dir + 'data_csv_only.pkl')
 
-    ir.cv(10)
+    ir.cv(4)
     ir.train(params)
     ir.save_run_metadata()

@@ -217,8 +217,7 @@ if __name__ == "__main__":
         id=ir.identifier,
         one_hot_names=ir.one_hot_names,
         n_input=ir.n_input,
-        #  model_name="cnn_02-21-2017_21:24:28-10",
-        model_name='test.pkl',
+        model_name="cnn_02-22-2017_08:46:07-299",
         weight_dir="weight/",
         prediction_dir="predictions/",
         tensor_name="output/activation:0",
@@ -227,6 +226,6 @@ if __name__ == "__main__":
         learning_rate=0.01,
         debug=True)
 
-    #  load_session_and_save_prediction(**metadata)
-    evaluate(**metadata)
+    load_session_and_save_prediction(**metadata)
+    #  evaluate(**metadata)
     #  visualize(**metadata)

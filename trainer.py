@@ -53,6 +53,8 @@ class Trainer():
     def generate_model(self, mdl):
         if mdl.lower() == 'cnn':
             model_function = model.cnn
+        elif mdl.lower() == 'cnn256':
+            model_function = model.cnn256
         elif mdl.lower() == 'mlp':
             model_function = model.mlp
         elif mdl.lower() == 'cnn_pred_mlp':
@@ -82,8 +84,8 @@ class Trainer():
 
         # Summary handler
         merged = tf.summary.merge_all()
-        train_writer = tf.summary.FileWriter('output/train_' + self.name, sess.graph)
-        test_writer = tf.summary.FileWriter('output/test_' + self.name)
+        train_writer = tf.summary.FileWriter('output/' + self.name + '_train', sess.graph)
+        test_writer = tf.summary.FileWriter('output/' + self.name + '_test')
 
         # Saver
         saver = tf.train.Saver()
@@ -105,7 +107,7 @@ class Trainer():
                 xs, ys = self.test, self.test_labels
                 k = 1.0
 
-            if mdl.lower() == 'cnn':
+            if mdl.lower() == 'cnn' or mdl.lower()=='cnn256':
                 xs = input_transform(xs)
 
             return {x: xs, y_: ys, keep_prob: k}
@@ -114,10 +116,7 @@ class Trainer():
             if i % 10 == 0:  # Record summaries and test-set accuracy
                 summary, acc = sess.run([merged, accuracy], feed_dict=feed_dict(False))
                 test_writer.add_summary(summary, i)
-                saver.save(sess, 'weight/' + self.name, global_step=i)
-                print('Test accuracy at step %s: %s' % (i, acc))
-            #  if (i+1) % 50 == 0:
-                #  saver.save(sess, 'weight/' + self.name, global_step=i)
+                print('[%s]Test acc step %s: %s' % (self.name, i, acc))
             else:  # Record train set summaries, and train
                 if i % 100 == 99:  # Record execution stats
                     run_options = tf.RunOptions(trace_level=tf.RunOptions.FULL_TRACE)
@@ -128,7 +127,7 @@ class Trainer():
                                           run_metadata=run_metadata)
                     train_writer.add_run_metadata(run_metadata, 'step%03d' % i)
                     train_writer.add_summary(summary, i)
-                    if i % 1000 == 499:
+                    if i % 1000 == 299:
                         saver.save(sess, 'weight/' + self.name, global_step=i)
                     print('Adding run metadata for', i)
                 else:  # Record a summary
@@ -164,8 +163,8 @@ class Trainer():
 
         # Summary handler
         merged = tf.summary.merge_all()
-        train_writer = tf.summary.FileWriter('output/train_' + self.name, sess.graph)
-        test_writer = tf.summary.FileWriter('output/test_' + self.name)
+        train_writer = tf.summary.FileWriter('output/' + self.name + '_train', sess.graph)
+        test_writer = tf.summary.FileWriter('output/' + self.name + '_test')
 
         # Saver
         saver = tf.train.Saver()

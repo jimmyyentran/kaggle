@@ -198,12 +198,16 @@ def mlp2(n_input, n_classes):
 
     return x, y_, keep_prob, y, None
 
-def cnn(n_input, n_classes):
+def cnn(n_input, n_classes, rotate=True):
     side = int(math.sqrt(n_input))
 
     def input_transform(x):
         if type(x) is tf.Tensor:
-            return tf.reshape(x, shape=[-1, side, side, 1])
+            transform = tf.reshape(x, shape=[-1, side, side, 1])
+            if rotate:
+                with tf.variable_scope("image_transform"):
+                    transform = tf.contrib.image.rotate(transform, random.uniform(0,6.28))
+            return transform
         else:
             return np.reshape(x, [-1, side, side, 1])
 
@@ -228,12 +232,16 @@ def cnn(n_input, n_classes):
     return x, y_, keep_prob, y, input_transform, None
 
 
-def cnn256(n_input, n_classes):
+def cnn256(n_input, n_classes, rotate=False):
     side = int(math.sqrt(n_input))
 
     def input_transform(x):
         if type(x) is tf.Tensor:
-            return tf.reshape(x, shape=[-1, side, side, 1])
+            transform = tf.reshape(x, shape=[-1, side, side, 1])
+            if rotate:
+                with tf.variable_scope("image_transform"):
+                    transform = tf.contrib.image.rotate(transform, random.uniform(0,6.28))
+            return transform
         else:
             return np.reshape(x, [-1, side, side, 1])
 
@@ -242,9 +250,9 @@ def cnn256(n_input, n_classes):
 
     x = input_transform(x)
 
-    filter1 = 13
-    filter2 = 25
-    red = 64
+    filter1 = 32
+    filter2 = 64
+    red = 25
     out = 1024
 
     conv1 = nn_layer(x, 1, filter1, 'layer1', conv2d=True)
@@ -270,7 +278,9 @@ def cnn2(n_input, n_classes, rotate=False):
         if type(x) is tf.Tensor:
             transform = tf.reshape(x, shape=[-1, side, side, 1])
             if rotate:
-                transform = tf.contrib.image.rotate(transform, random.uniform(0,6.28))
+                with tf.variable_scope("image_transform"):
+                    transform = tf.contrib.image.rotate(transform, random.uniform(0,6.28))
+                #  transform = tf.contrib.image.rotate(transform, random.uniform(0,6.28))
             return transform
         else:
             return np.reshape(x, [-1, side, side, 1])
@@ -299,12 +309,12 @@ def cnn2(n_input, n_classes, rotate=False):
     #  il1 = tf.concat([dropped, x2], 1) # tf1.0
 
     #  il2 = nn_layer(il1, 1024 + additional_input, 5000, 'integration_layer2')
-    il2 = nn_layer(il1, n_classes + additional_input, 5000, 'integration_layer2')
+    il2 = nn_layer(il1, n_classes + additional_input, 3000, 'integration_layer2')
     dropped2 = dropout(il2, keep_prob)
 
-    il3 = nn_layer(dropped2, 5000, 5000, 'integration_layer3')
+    il3 = nn_layer(dropped2, 3000, 3000, 'integration_layer3')
     dropped3 = dropout(il3, keep_prob)
 
-    y = nn_layer(dropped3, 5000, n_classes, 'output', act=tf.identity)
+    y = nn_layer(dropped3, 3000, n_classes, 'output', act=tf.identity)
 
     return x, y_, keep_prob, y, input_transform, x2

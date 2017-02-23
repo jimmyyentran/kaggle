@@ -207,8 +207,9 @@ def evaluate(**kwargs):
 
 if __name__ == "__main__":
     ir = ImageRecognition()
-    ir.load_processed_data('data/data_image_100.pkl')
+    #  ir.load_processed_data('data/data_image_100.pkl')
     #  load_metadata('metadata_02-20-2017_02:10:32.pkl')
+    ir.load_processed_data('data/data_csv_only.pkl')
     test = ir.data[:, :-99]
     label = ir.data[:, -99:]
     metadata = dict(
@@ -217,7 +218,7 @@ if __name__ == "__main__":
         id=ir.identifier,
         one_hot_names=ir.one_hot_names,
         n_input=ir.n_input,
-        model_name="cnn_02-22-2017_08:46:07-299",
+        model_name = 'mlp_02-23-2017_03:40:54-199',
         weight_dir="weight/",
         prediction_dir="predictions/",
         tensor_name="output/activation:0",

@@ -104,6 +104,11 @@ class ImageRecognition:
             self.n_input = pickle.load(input)
 
     def cv(self, num_splits):
+        if num_splits == 1:
+            self.train_index.append(range(self.data.shape[0]))
+            self.test_index.append(range(self.data.shape[0]))
+            return
+
         # K-fold with shuffle
         kf = KFold(n_splits=num_splits, shuffle=True)
 
@@ -124,19 +129,11 @@ class ImageRecognition:
         for i in range(min):
             model = params['model']
 
-            cv_train_data = self.data[self.train_index[i]]
-            cv_test_data = self.data[self.test_index[i]]
-
-            train = cv_train_data[:, :self.n_input]
-            train_labels = cv_train_data[:, self.n_input:]
-            test = cv_test_data[:, :self.n_input]
-            test_labels = cv_test_data[:, self.n_input:]
-
             if model.lower() == "cnn_pred_mlp":
-                with open("predictions/cnn_02-22-2017_08:46:07-299", 'rb') as input:
+                model_name = 'cnn_02-23-2017_01:50:59'
+                with open("predictions/" + model_name + "-199", 'rb') as input:
                 #  with open("predictions/labels", 'rb') as input:
                     cnn_pred = pickle.load(input)
-
                 cnn_pred = sklearn.preprocessing.normalize(cnn_pred, axis=1) #normalize
                 top_3_idx = np.argpartition(cnn_pred, -3, axis=1)[:,-3:]
                 keeper = np.zeros(cnn_pred.shape)
@@ -145,10 +142,33 @@ class ImageRecognition:
                     zeros[top_3_idx[j]] = 1
                     keeper[j] = cnn_pred[j] * zeros
                 cnn_pred = keeper
-                print cnn_pred[0]
-                train = np.column_stack((train, cnn_pred[self.train_index[i]]))
-                test = np.column_stack((test, cnn_pred[self.test_index[i]]))
+
+                with open('metadata/' + model_name, 'rb') as input2:
+                    names = pickle.load(input2)
+                    train_index = pickle.load(input2)
+                    test_index = pickle.load(input2)
+
+
+                cv_train_data = self.data[train_index[0]]
+                cv_test_data = self.data[test_index[0]]
+
+                train = cv_train_data[:, :self.n_input]
+                train_labels = cv_train_data[:, self.n_input:]
+                test = cv_test_data[:, :self.n_input]
+                test_labels = cv_test_data[:, self.n_input:]
+
+                train = np.column_stack((train, cnn_pred[train_index[0]]))
+                test = np.column_stack((test, cnn_pred[test_index[0]]))
+
                 self.n_input += cnn_pred.shape[1]
+            else:
+                cv_train_data = self.data[self.train_index[i]]
+                cv_test_data = self.data[self.test_index[i]]
+
+                train = cv_train_data[:, :self.n_input]
+                train_labels = cv_train_data[:, self.n_input:]
+                test = cv_test_data[:, :self.n_input]
+                test_labels = cv_test_data[:, self.n_input:]
 
             print "Set %s)" % (i + 1) + \
                   " Train: {}".format(train.shape) + \
@@ -174,7 +194,7 @@ class ImageRecognition:
                 Trainer(**params).generate_model(model)
 
     def save_run_metadata(self):
-        with open('metadata/' + self.names[0] + '.pkl', 'wb') as output:
+        with open('metadata/' + self.names[0], 'wb') as output:
             pickle.dump(self.names, output, -1)
             pickle.dump(self.train_index, output, -1)
             pickle.dump(self.test_index, output, -1)
@@ -195,23 +215,23 @@ if __name__ == "__main__":
     ir = ImageRecognition()
 
     params = dict(learning_rate=0.001,
-                training_epochs=301,
-                batch_size=100,
+                training_epochs=201,
+                batch_size=50,
                 display_step=1,
                 n_hidden_1=10000,
                 n_hidden_2=10000,
                 n_classes=99,
                 keep_prob=0.95,
                 train_times=1,
-                model="cnn_mlp",
-                #  model='mlp',
+                #  model="cnn_mlp",
+                model='mlp',
                 #  model="cnn",
                 #  model="cnn256",
                 #  model = "cnn_pred_mlp",
                 integrated=True,
                 debug=False,
-                #  rotate=False)
-                rotate=True)
+                rotate=False)
+                #  rotate=True)
 
     data_dir = "data/"
 
@@ -226,6 +246,6 @@ if __name__ == "__main__":
     else:
         ir.load_processed_data(data_dir + 'data_csv_only.pkl')
 
-    ir.cv(4)
+    ir.cv(1)
     ir.train(params)
     ir.save_run_metadata()

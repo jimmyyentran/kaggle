@@ -52,7 +52,7 @@ class Trainer():
 
     def generate_model(self, mdl):
         if mdl.lower() == 'cnn':
-            model_function = model.cnn
+            model_function = model.cnn256
         elif mdl.lower() == 'cnn256':
             model_function = model.cnn256
         elif mdl.lower() == 'mlp':
@@ -68,7 +68,9 @@ class Trainer():
 
         # Model tensors
         #  x, y_, keep_prob, y, input_transform = model_function(self.n_input, self.n_classes)
-        x, y_, keep_prob, y, input_transform, _ = model_function(self.n_input, self.n_classes)
+        x, y_, keep_prob, y, input_transform, _ = model_function(self.n_input,
+                #  self.n_classes, rotate=self.rotate)
+                self.n_classes)
 
         cross_entropy = model.loss(y, y_)
 
@@ -127,7 +129,7 @@ class Trainer():
                                           run_metadata=run_metadata)
                     train_writer.add_run_metadata(run_metadata, 'step%03d' % i)
                     train_writer.add_summary(summary, i)
-                    if i % 1000 == 299:
+                    if i % 1000 == 199:
                         saver.save(sess, 'weight/' + self.name, global_step=i)
                     print('Adding run metadata for', i)
                 else:  # Record a summary
@@ -198,7 +200,7 @@ class Trainer():
             if i % 10 == 0:  # Record summaries and test-set accuracy
                 summary, acc = sess.run([merged, accuracy], feed_dict=feed_dict(False))
                 test_writer.add_summary(summary, i)
-                print('Test accuracy at step %s: %s' % (i, acc))
+                print('[%s]Test acc step %s: %s' % (self.name, i, acc))
             else:  # Record train set summaries, and train
                 if i % 100 == 99:  # Record execution stats
                     run_options = tf.RunOptions(trace_level=tf.RunOptions.FULL_TRACE)
@@ -209,7 +211,7 @@ class Trainer():
                                           run_metadata=run_metadata)
                     train_writer.add_run_metadata(run_metadata, 'step%03d' % i)
                     train_writer.add_summary(summary, i)
-                    if i % 1000 == 999:
+                    if i % 1000 == 199:
                         saver.save(sess, 'weight/' + self.name, global_step=i)
                     print('Adding run metadata for', i)
                 else:  # Record a summary

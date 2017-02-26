@@ -211,7 +211,7 @@ class Trainer():
                                           run_metadata=run_metadata)
                     train_writer.add_run_metadata(run_metadata, 'step%03d' % i)
                     train_writer.add_summary(summary, i)
-                    if i % 1000 == 199:
+                    if i % 1000 == 399:
                         saver.save(sess, 'weight/' + self.name, global_step=i)
                     print('Adding run metadata for', i)
                 else:  # Record a summary

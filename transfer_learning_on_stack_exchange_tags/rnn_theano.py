@@ -4,6 +4,8 @@ import theano.tensor as T
 from utils import *
 import operator
 
+#theano.config.openmp = True
+
 class RNNTheano:
     
     def __init__(self, word_dim, hidden_dim=100, bptt_truncate=4):

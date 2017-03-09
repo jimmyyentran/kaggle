@@ -12,8 +12,8 @@ from datetime import datetime
 from utils import *
 from rnn_theano import RNNTheano
 
-_VOCABULARY_SIZE = int(os.environ.get('VOCABULARY_SIZE', '8000'))
-_HIDDEN_DIM = int(os.environ.get('HIDDEN_DIM', '80'))
+_VOCABULARY_SIZE = int(os.environ.get('VOCABULARY_SIZE', '20000'))
+_HIDDEN_DIM = int(os.environ.get('HIDDEN_DIM', '2000'))
 _LEARNING_RATE = float(os.environ.get('LEARNING_RATE', '0.005'))
 _NEPOCH = int(os.environ.get('NEPOCH', '100'))
 _MODEL_FILE = os.environ.get('MODEL_FILE')
@@ -25,22 +25,22 @@ def train_with_sgd(model, X_train, y_train, learning_rate=0.005, nepoch=1, evalu
     for epoch in range(nepoch):
 	print "Epoch: ", epoch
         # Optionally evaluate the loss
-        if (epoch % evaluate_loss_after == 4):
-	    print "Evaluating"
-            loss = model.calculate_loss(X_train, y_train)
-            losses.append((num_examples_seen, loss))
+        if (epoch % evaluate_loss_after == 0):
+	    #print "Evaluating"
+            #loss = model.calculate_loss(X_train, y_train)
+            #losses.append((num_examples_seen, loss))
             time = datetime.now().strftime('%Y-%m-%d-%H-%M-%S')
-            print "%s: Loss after num_examples_seen=%d epoch=%d: %f" % (time, num_examples_seen, epoch, loss)
-            # Adjust the learning rate if loss increases
-            if (len(losses) > 1 and losses[-1][1] > losses[-2][1]):
-                learning_rate = learning_rate * 0.5  
-                print "Setting learning rate to %f" % learning_rate
-            sys.stdout.flush()
+            #print "%s: Loss after num_examples_seen=%d epoch=%d: %f" % (time, num_examples_seen, epoch, loss)
+            ## Adjust the learning rate if loss increases
+            #if (len(losses) > 1 and losses[-1][1] > losses[-2][1]):
+            #    learning_rate = learning_rate * 0.5  
+            #    print "Setting learning rate to %f" % learning_rate
+            #sys.stdout.flush()
             # ADDED! Saving model oarameters
             save_model_parameters_theano("./data/rnn-theano-%d-%d-%s.npz" % (model.hidden_dim, model.word_dim, time), model)
         # For each training example...
         for i in range(len(y_train)):
-	    if i % 100 == 0:
+	    if i % 1000 == 0:
 		print "Training ex", i
             # One SGD step
             model.sgd_step(X_train[i], y_train[i], learning_rate)
@@ -52,9 +52,10 @@ sentence_start_token = "SENTENCE_START"
 sentence_end_token = "SENTENCE_END"
 
 # Read the data and append SENTENCE_START and SENTENCE_END tokens
+csv_file = 'preprocess/biology_light_punctuation_with_stop.csv'
 print "Reading CSV file..."
 #  with open('data/reddit-comments-2015-08.csv', 'rb') as f:
-with open('preprocess/biology_light_punctuation_with_stop.csv', 'rb') as f:
+with open(csv_file, 'rb') as f:
     reader = csv.reader(f, skipinitialspace=True)
     reader.next()
     # Split full comments into sentences

@@ -11,12 +11,14 @@ import time
 from datetime import datetime
 from utils import *
 from rnn_theano import RNNTheano
+from IPython import embed
 
 _VOCABULARY_SIZE = int(os.environ.get('VOCABULARY_SIZE', '8000'))
 _HIDDEN_DIM = int(os.environ.get('HIDDEN_DIM', '80'))
 _LEARNING_RATE = float(os.environ.get('LEARNING_RATE', '0.005'))
 _NEPOCH = int(os.environ.get('NEPOCH', '100'))
 _MODEL_FILE = os.environ.get('MODEL_FILE')
+_EVALUATE_ = os.environ.get('EVALUATE', False)
 
 def train_with_sgd(model, X_train, y_train, learning_rate=0.005, nepoch=1, evaluate_loss_after=5):
     # We keep track of the losses so we can plot them later
@@ -97,5 +99,32 @@ print "SGD Step time: %f milliseconds" % ((t2 - t1) * 1000.)
 if _MODEL_FILE != None:
     load_model_parameters_theano(_MODEL_FILE, model)
 
-print "Begin training"
-train_with_sgd(model, X_train, y_train, nepoch=_NEPOCH, learning_rate=_LEARNING_RATE)
+if not _EVALUATE_:
+    print "Begin training"
+    train_with_sgd(model, X_train, y_train, nepoch=_NEPOCH, learning_rate=_LEARNING_RATE)
+else:
+    print "Start IPython"
+    def generate_sentence(model):
+        # We start the sentence with the start token
+        new_sentence = [word_to_index[sentence_start_token]]
+        # Repeat until we get an end token
+        while not new_sentence[-1] == word_to_index[sentence_end_token]:
+            next_word_probs = model.forward_propagation(new_sentence)
+            sampled_word = word_to_index[unknown_token]
+            # We don't want to sample unknown words
+            while sampled_word == word_to_index[unknown_token]:
+                samples = np.random.multinomial(1, next_word_probs[-1])
+                sampled_word = np.argmax(samples)
+            new_sentence.append(sampled_word)
+        sentence_str = [index_to_word[x] for x in new_sentence[1:-1]]
+        return sentence_str
+
+    def gen(num_sentences, senten_min_length):
+        for i in range(num_sentences):
+            sent = []
+            # We want long sentences, not sentences with one or two words
+            while len(sent) < senten_min_length:
+                sent = generate_sentence(model)
+            print " ".join(sent)
+
+    embed()

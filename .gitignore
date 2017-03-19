@@ -3,4 +3,3 @@ output/
 .DS_Store
 *.pyc
 *.idea
-*.ipynb
